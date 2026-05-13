@@ -78,6 +78,78 @@ function DraggableCard({ task }: { task: BoardTask }) {
   );
 }
 
+function MobileTaskCard({
+  task,
+  updating,
+  onStatusChange
+}: {
+  task: BoardTask;
+  updating: boolean;
+  onStatusChange: (taskId: string, nextStatus: TaskStatus) => void;
+}) {
+  const currentIndex = columns.findIndex((column) => column.id === task.status);
+  const previousStatus = currentIndex > 0 ? columns[currentIndex - 1] : null;
+  const nextStatus = currentIndex >= 0 && currentIndex < columns.length - 1 ? columns[currentIndex + 1] : null;
+
+  return (
+    <article className="rounded-lg border border-stroke bg-surface p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="min-w-0 text-sm font-semibold leading-5 [overflow-wrap:anywhere]">{task.title}</h3>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Badge variant={priorityVariant(task.priority)}>{priorityLabels[task.priority]}</Badge>
+            <Badge>{columns.find((column) => column.id === task.status)?.label}</Badge>
+          </div>
+        </div>
+      </div>
+      {task.description && <p className="mt-3 line-clamp-3 text-sm leading-5 text-muted">{task.description}</p>}
+      <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted">
+        <span className="rounded-md bg-panelSoft px-2 py-1">{formatDate(task.dueAt)}</span>
+        {task.assignee && <span className="rounded-md bg-panelSoft px-2 py-1">{task.assignee.name}</span>}
+        {task.project && <span className="rounded-md bg-panelSoft px-2 py-1">{task.project.name}</span>}
+      </div>
+      <div className="mt-4 grid gap-2">
+        <label className="block">
+          <span className="mb-2 block text-xs text-muted">Статус</span>
+          <select
+            value={task.status}
+            disabled={updating}
+            onChange={(event) => onStatusChange(task.id, event.target.value as TaskStatus)}
+            className="h-10 w-full rounded-md border border-stroke bg-panel px-3 text-sm outline-none transition focus:border-brand disabled:opacity-60"
+          >
+            {columns.map((column) => (
+              <option key={column.id} value={column.id}>
+                {column.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            disabled={!previousStatus || updating}
+            onClick={() => previousStatus && onStatusChange(task.id, previousStatus.id)}
+            className="h-10 rounded-md border border-stroke px-3 text-sm font-medium text-muted transition hover:text-text disabled:opacity-40"
+          >
+            Назад
+          </button>
+          <button
+            type="button"
+            disabled={!nextStatus || updating}
+            onClick={() => nextStatus && onStatusChange(task.id, nextStatus.id)}
+            className="h-10 rounded-md bg-brand px-3 text-sm font-semibold text-surface transition hover:bg-emerald-300 disabled:opacity-40"
+          >
+            Дальше
+          </button>
+        </div>
+        <Link href={`/app/tasks/${task.id}`} className="inline-flex h-10 items-center justify-center rounded-md border border-stroke text-sm font-medium text-muted transition hover:text-text">
+          Открыть задачу
+        </Link>
+      </div>
+    </article>
+  );
+}
+
 function DroppableColumn({ status, label, tasks }: { status: TaskStatus; label: string; tasks: BoardTask[] }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
 
@@ -99,6 +171,7 @@ function DroppableColumn({ status, label, tasks }: { status: TaskStatus; label: 
 export function TaskBoard({ tasks }: { tasks: BoardTask[] }) {
   const router = useRouter();
   const [items, setItems] = useState(tasks);
+  const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
 
   useEffect(() => {
     setItems(tasks);
@@ -114,12 +187,13 @@ export function TaskBoard({ tasks }: { tasks: BoardTask[] }) {
     );
   }, [items]);
 
-  async function onDragEnd(event: DragEndEvent) {
-    const taskId = String(event.active.id);
-    const nextStatus = event.over?.id as TaskStatus | undefined;
-    if (!nextStatus || !columns.some((column) => column.id === nextStatus)) return;
+  async function updateTaskStatus(taskId: string, nextStatus: TaskStatus) {
+    if (!columns.some((column) => column.id === nextStatus)) return;
+    const targetTask = items.find((task) => task.id === taskId);
+    if (!targetTask || targetTask.status === nextStatus || updatingTaskId) return;
 
     const previous = items;
+    setUpdatingTaskId(taskId);
     setItems((current) => current.map((task) => (task.id === taskId ? { ...task, status: nextStatus } : task)));
 
     const response = await fetch("/api/tasks/status", {
@@ -130,19 +204,37 @@ export function TaskBoard({ tasks }: { tasks: BoardTask[] }) {
 
     if (!response.ok) {
       setItems(previous);
+      setUpdatingTaskId(null);
       return;
     }
 
+    setUpdatingTaskId(null);
     router.refresh();
   }
 
+  async function onDragEnd(event: DragEndEvent) {
+    const taskId = String(event.active.id);
+    const nextStatus = event.over?.id as TaskStatus | undefined;
+    if (!nextStatus) return;
+    await updateTaskStatus(taskId, nextStatus);
+  }
+
   return (
-    <DndContext onDragEnd={onDragEnd}>
-      <div className="grid gap-4 overflow-x-auto pb-2 lg:grid-cols-5">
-        {columns.map((column) => (
-          <DroppableColumn key={column.id} status={column.id} label={column.label} tasks={grouped[column.id]} />
+    <>
+      <div className="space-y-3 lg:hidden">
+        {items.length === 0 && <div className="rounded-lg border border-stroke bg-panel p-4 text-sm text-muted">Задач пока нет</div>}
+        {items.map((task) => (
+          <MobileTaskCard key={task.id} task={task} updating={updatingTaskId === task.id} onStatusChange={updateTaskStatus} />
         ))}
       </div>
-    </DndContext>
+
+      <DndContext onDragEnd={onDragEnd}>
+        <div className="hidden gap-4 overflow-x-auto pb-2 lg:grid lg:grid-cols-5">
+          {columns.map((column) => (
+            <DroppableColumn key={column.id} status={column.id} label={column.label} tasks={grouped[column.id]} />
+          ))}
+        </div>
+      </DndContext>
+    </>
   );
 }

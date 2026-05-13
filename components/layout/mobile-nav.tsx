@@ -15,13 +15,13 @@ export function MobileNav({ user }: { user: CurrentUser }) {
   const visible = nav.filter((item) => hasPermission(user.role.code, item.permission));
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t border-stroke bg-surface/95 px-2 py-2 backdrop-blur lg:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t border-stroke bg-surface/95 px-1 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 backdrop-blur lg:hidden">
       {visible.map((item) => {
         const Icon = item.icon;
         return (
-          <Link key={item.href} href={item.href} className="flex flex-col items-center gap-1 rounded-md px-1 py-2 text-[11px] text-muted">
+          <Link key={item.href} href={item.href} className="flex min-w-0 flex-col items-center gap-1 rounded-md px-1 py-2 text-[10px] text-muted min-[390px]:text-[11px]">
             <Icon size={18} />
-            <span>{item.label}</span>
+            <span className="max-w-full truncate">{item.label}</span>
           </Link>
         );
       })}
