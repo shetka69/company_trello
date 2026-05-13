@@ -1,0 +1,9 @@
+{
+  "name": "Company Workspace",
+  "short_name": "Workspace",
+  "start_url": "/app",
+  "display": "standalone",
+  "background_color": "#101113",
+  "theme_color": "#101113",
+  "description": "Корпоративная система управления работой команды"
+}

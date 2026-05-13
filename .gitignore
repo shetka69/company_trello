@@ -1,0 +1,10 @@
+node_modules
+.next
+.env
+.env*.local
+dist
+coverage
+*.log
+tsconfig.tsbuildinfo
+prisma/dev.db
+.quickstart-seeded
