@@ -1,12 +1,22 @@
 "use client";
 
+import Link from "next/link";
+import { Search, SlidersHorizontal } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 
 type Option = {
   id: string;
   name: string;
+};
+
+type SearchResult = {
+  id: string;
+  type: string;
+  title: string;
+  subtitle: string;
+  href: string;
 };
 
 const statusOptions = [
@@ -33,7 +43,12 @@ const sortOptions = [
 export function TaskFilters({ assignees, projects }: { assignees: Option[]; projects: Option[] }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const searchRef = useRef<HTMLFormElement>(null);
   const [query, setQuery] = useState(searchParams.get("q") ?? "");
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [resultsOpen, setResultsOpen] = useState(false);
+  const [loadingResults, setLoadingResults] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const values = useMemo(
     () => ({
@@ -46,6 +61,53 @@ export function TaskFilters({ assignees, projects }: { assignees: Option[]; proj
     }),
     [searchParams]
   );
+
+  useEffect(() => {
+    function close(event: MouseEvent) {
+      if (!searchRef.current?.contains(event.target as Node)) {
+        setResultsOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, []);
+
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (trimmed.length < 2) {
+      setResults([]);
+      setLoadingResults(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setLoadingResults(true);
+      try {
+        const response = await fetch(`/api/search?scope=tasks&q=${encodeURIComponent(trimmed)}`, {
+          signal: controller.signal
+        });
+
+        if (response.ok) {
+          const data = (await response.json()) as { results: SearchResult[] };
+          setResults(data.results);
+          setResultsOpen(true);
+        }
+      } catch (error) {
+        if ((error as Error).name !== "AbortError") {
+          setResults([]);
+        }
+      } finally {
+        setLoadingResults(false);
+      }
+    }, 200);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [query]);
 
   function update(next: Record<string, string | boolean>) {
     const params = new URLSearchParams(searchParams.toString());
@@ -66,29 +128,75 @@ export function TaskFilters({ assignees, projects }: { assignees: Option[]; proj
 
   function applySearch(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setResultsOpen(false);
     update({ q: query.trim() });
   }
 
   function reset() {
     setQuery("");
+    setResults([]);
     router.push("/app/tasks");
   }
 
   return (
     <div className="rounded-lg border border-stroke bg-panel p-4">
-      <div className="grid gap-3 xl:grid-cols-[minmax(260px,1.4fr)_repeat(5,minmax(130px,1fr))_auto] xl:items-end">
-        <form onSubmit={applySearch} className="min-w-0">
+      <button
+        type="button"
+        onClick={() => setFiltersOpen((value) => !value)}
+        className="flex h-10 w-full items-center justify-between rounded-md border border-stroke px-3 text-sm font-medium text-muted transition hover:text-text md:hidden"
+      >
+        <span className="inline-flex items-center gap-2">
+          <SlidersHorizontal size={16} />
+          Поиск и фильтры
+        </span>
+        <span>{filtersOpen ? "Скрыть" : "Открыть"}</span>
+      </button>
+
+      <div className={`${filtersOpen ? "mt-3 grid" : "hidden"} gap-3 md:grid xl:grid-cols-[minmax(260px,1.4fr)_repeat(5,minmax(130px,1fr))_auto] xl:items-end`}>
+        <form ref={searchRef} onSubmit={applySearch} className="relative min-w-0">
           <span className="mb-2 block text-xs text-muted">Поиск</span>
           <div className="flex min-w-0 gap-2">
-            <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            className="h-10 min-w-0 flex-1 rounded-md border border-stroke bg-surface px-3 text-sm outline-none transition focus:border-brand"
-            placeholder="Поиск по задачам"
-          />
+            <div className="relative min-w-0 flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={16} />
+              <input
+                value={query}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setResultsOpen(true);
+                }}
+                onFocus={() => setResultsOpen(true)}
+                className="h-10 min-w-0 w-full rounded-md border border-stroke bg-surface py-2 pl-9 pr-3 text-sm outline-none transition focus:border-brand"
+                placeholder="Поиск по задачам"
+              />
+            </div>
             <Button className="shrink-0">Найти</Button>
           </div>
+
+          {resultsOpen && query.trim().length >= 2 && (
+            <div className="absolute left-0 right-0 top-[68px] z-30 overflow-hidden rounded-lg border border-stroke bg-panel shadow-clean">
+              <div className="max-h-80 overflow-y-auto p-2">
+                {loadingResults && <div className="px-3 py-2 text-sm text-muted">Поиск...</div>}
+                {!loadingResults && results.length === 0 && <div className="px-3 py-2 text-sm text-muted">Ничего не найдено</div>}
+                {!loadingResults &&
+                  results.map((result) => (
+                    <Link
+                      key={result.id}
+                      href={result.href}
+                      onClick={() => {
+                        setResultsOpen(false);
+                        setQuery("");
+                      }}
+                      className="block rounded-md px-3 py-2 transition hover:bg-panelSoft"
+                    >
+                      <div className="truncate text-sm font-medium">{result.title}</div>
+                      <div className="mt-1 truncate text-xs text-muted">{result.subtitle}</div>
+                    </Link>
+                  ))}
+              </div>
+            </div>
+          )}
         </form>
+
         <Select label="Статус" value={values.status} onChange={(value) => update({ status: value })} options={statusOptions} />
         <Select label="Приоритет" value={values.priority} onChange={(value) => update({ priority: value })} options={priorityOptions} />
         <Select label="Исполнитель" value={values.assigneeId} onChange={(value) => update({ assigneeId: value })} options={assignees.map((item) => ({ value: item.id, label: item.name }))} />

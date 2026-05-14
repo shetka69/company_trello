@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
-import { hasPermission } from "@/lib/permissions";
+import { hasUserPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
@@ -15,18 +15,22 @@ const schema = z.object({
 
 export async function POST(request: Request) {
   const user = await requireUser();
-  if (!hasPermission(user.role.code, "calendar:manage")) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const canManageCalendar = hasUserPermission(user, "calendar:manage");
 
   const parsed = schema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
-  if (parsed.data.assigneeId) {
+  if (!canManageCalendar && parsed.data.type !== "REMINDER") {
+    return NextResponse.json({ error: "Only private reminders are allowed" }, { status: 403 });
+  }
+
+  const assigneeId = canManageCalendar ? parsed.data.assigneeId || null : user.id;
+
+  if (assigneeId) {
     const assignee = await prisma.user.findFirst({
-      where: { id: parsed.data.assigneeId, companyId: user.companyId, isActive: true },
+      where: { id: assigneeId, companyId: user.companyId, isActive: true },
       select: { id: true }
     });
 
@@ -39,8 +43,8 @@ export async function POST(request: Request) {
     data: {
       companyId: user.companyId,
       creatorId: user.id,
-      assigneeId: parsed.data.assigneeId || null,
-      type: parsed.data.type,
+      assigneeId,
+      type: canManageCalendar ? parsed.data.type : "REMINDER",
       title: parsed.data.title.trim(),
       description: parsed.data.description?.trim() || null,
       startsAt: new Date(parsed.data.startsAt),

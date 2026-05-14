@@ -15,7 +15,7 @@ import {
 } from "@/components/inventory/inventory-forms";
 import { requirePermission, requireUser } from "@/lib/auth";
 import { inventoryScopeFor } from "@/lib/data-scope";
-import { hasPermission } from "@/lib/permissions";
+import { hasUserPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/utils";
 
@@ -43,9 +43,9 @@ type SearchParams = {
 
 export default async function InventoryPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
   const user = await requireUser();
-  requirePermission(user.role.code, "inventory:read");
+  requirePermission(user, "inventory:read");
   const params = (await searchParams) ?? {};
-  const canManageInventory = hasPermission(user.role.code, "inventory:manage");
+  const canManageInventory = hasUserPermission(user, "inventory:manage");
   const itemScope = inventoryScopeFor(user);
   const itemWhere = buildInventoryWhere(itemScope, params);
   const [items, transactions, deliveries, users, categories] = await Promise.all([

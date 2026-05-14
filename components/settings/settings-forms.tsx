@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { roleLabels } from "@/lib/permissions";
+import { permissionLabels, permissions, permissionsByRole, roleLabels, type Permission } from "@/lib/permissions";
 
 type RoleCode = keyof typeof roleLabels;
 
@@ -28,6 +28,7 @@ type Employee = {
   telegramChatId: string | null;
   isActive: boolean;
   role: { code: RoleCode };
+  permissionOverrides: { permission: string; enabled: boolean }[];
 };
 
 export function UserCreateForm({ roles, departments }: { roles: RoleOption[]; departments: DepartmentOption[] }) {
@@ -339,6 +340,63 @@ export function DepartmentEditForm({ department }: { department: DepartmentOptio
         </button>
       </div>
       {error && <div className="mt-2 text-sm text-danger">{error}</div>}
+    </div>
+  );
+}
+
+export function PermissionToggleGrid({ employee }: { employee: Employee }) {
+  const router = useRouter();
+  const [updating, setUpdating] = useState<string | null>(null);
+  const overrides = new Map(employee.permissionOverrides.map((item) => [item.permission, item.enabled]));
+
+  async function setPermission(permission: Permission, enabled: boolean) {
+    if (updating) return;
+    setUpdating(permission);
+
+    const response = await fetch(`/api/settings/users/${employee.id}/permissions`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ permission, enabled })
+    });
+
+    setUpdating(null);
+
+    if (response.ok) {
+      router.refresh();
+    }
+  }
+
+  return (
+    <div className="mt-4 rounded-md border border-stroke bg-panelSoft p-3">
+      <div className="mb-3 text-sm font-medium">Индивидуальный доступ</div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {permissions.map((permission) => {
+          const baseEnabled = permissionsByRole[employee.role.code].includes(permission);
+          const override = overrides.get(permission);
+          const enabled = override ?? baseEnabled;
+          const changed = override !== undefined && override !== baseEnabled;
+
+          return (
+            <button
+              key={permission}
+              type="button"
+              disabled={updating === permission}
+              onClick={() => setPermission(permission, !enabled)}
+              className={`flex min-h-11 items-center justify-between gap-3 rounded-md border px-3 py-2 text-left text-sm transition disabled:opacity-60 ${
+                enabled ? "border-brand/40 bg-brand/10 text-emerald-100" : "border-stroke bg-surface text-muted hover:text-text"
+              }`}
+            >
+              <span className="min-w-0">
+                <span className="block truncate">{permissionLabels[permission]}</span>
+                {changed && <span className="mt-0.5 block text-xs text-muted">Изменено вручную</span>}
+              </span>
+              <span className={`h-5 w-9 shrink-0 rounded-full p-0.5 transition ${enabled ? "bg-brand" : "bg-stroke"}`}>
+                <span className={`block h-4 w-4 rounded-full bg-white transition ${enabled ? "translate-x-4" : ""}`} />
+              </span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

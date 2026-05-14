@@ -3,11 +3,12 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { ChecklistForm, ChecklistToggle, CommentForm, TaskDeleteButton, TaskEditForm } from "@/components/tasks/task-detail-actions";
+import { ChecklistForm, ChecklistToggle, CommentForm, TaskDeleteButton, TaskEditForm, TaskStatusQuickActions } from "@/components/tasks/task-detail-actions";
 import { requirePermission, requireUser } from "@/lib/auth";
 import { taskScopeFor } from "@/lib/data-scope";
-import { canSeeAllCompanyData, hasPermission } from "@/lib/permissions";
+import { canSeeAllCompanyData, hasUserPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { markOverdueTasks } from "@/lib/tasks-maintenance";
 import { formatDate } from "@/lib/utils";
 
 const statusLabels = {
@@ -21,24 +22,31 @@ const statusLabels = {
 const priorityLabels = {
   LOW: "Низкий",
   NORMAL: "Обычный",
-  HIGH: "Высокий",
-  CRITICAL: "Критичный"
+  HIGH: "Важный",
+  CRITICAL: "Критический"
 };
 
 function priorityVariant(priority: keyof typeof priorityLabels) {
   if (priority === "CRITICAL") return "red" as const;
-  if (priority === "HIGH") return "amber" as const;
+  if (priority === "HIGH") return "red" as const;
   if (priority === "LOW") return "blue" as const;
   return "neutral" as const;
 }
 
 export default async function TaskDetailsPage({ params }: { params: Promise<{ taskId: string }> }) {
   const user = await requireUser();
-  requirePermission(user.role.code, "tasks:read");
+  requirePermission(user, "tasks:read");
+  await markOverdueTasks(user.companyId);
+
   const { taskId } = await params;
-  const canManageTasks = hasPermission(user.role.code, "tasks:manage");
+  const canManageTasks = hasUserPermission(user, "tasks:manage");
   const companyWide = canSeeAllCompanyData(user.role.code);
-  const departmentFilter = companyWide ? {} : { departmentId: user.departmentId ?? undefined };
+  const assigneeFilter =
+    user.role.code === "FOREMAN"
+      ? { role: { code: { notIn: ["DEVELOPER" as const, "MANAGER" as const] } } }
+      : companyWide
+        ? {}
+        : { departmentId: user.departmentId ?? undefined };
 
   const [task, assignees, departments, projects] = await Promise.all([
     prisma.task.findFirst({
@@ -55,7 +63,7 @@ export default async function TaskDetailsPage({ params }: { params: Promise<{ ta
     }),
     canManageTasks
       ? prisma.user.findMany({
-          where: { companyId: user.companyId, isActive: true, ...departmentFilter },
+          where: { companyId: user.companyId, isActive: true, ...assigneeFilter },
           select: { id: true, name: true },
           orderBy: { name: "asc" }
         })
@@ -74,10 +82,7 @@ export default async function TaskDetailsPage({ params }: { params: Promise<{ ta
             ...(companyWide
               ? {}
               : {
-                  OR: [
-                    { members: { some: { userId: user.id } } },
-                    { tasks: { some: { departmentId: user.departmentId } } }
-                  ]
+                  OR: [{ members: { some: { userId: user.id } } }, { tasks: { some: { departmentId: user.departmentId } } }]
                 })
           },
           select: { id: true, name: true },
@@ -90,13 +95,32 @@ export default async function TaskDetailsPage({ params }: { params: Promise<{ ta
     notFound();
   }
 
+  if (task.assigneeId === user.id && task.status === "NEW") {
+    await prisma.$transaction([
+      prisma.task.update({
+        where: { id: task.id },
+        data: { status: "IN_PROGRESS" }
+      }),
+      prisma.taskHistory.create({
+        data: {
+          taskId: task.id,
+          userId: user.id,
+          field: "status",
+          oldValue: "NEW",
+          newValue: "IN_PROGRESS"
+        }
+      })
+    ]);
+
+    task.status = "IN_PROGRESS";
+  }
+
   const doneItems = task.checklist.filter((item) => item.done).length;
 
   return (
     <div className="space-y-6">
       <Link href="/app/tasks" className="inline-flex items-center gap-2 text-sm text-muted transition hover:text-text">
-        <ArrowLeft size={16} />
-        К задачам
+        <ArrowLeft size={16} />К задачам
       </Link>
 
       <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
@@ -112,6 +136,14 @@ export default async function TaskDetailsPage({ params }: { params: Promise<{ ta
 
       <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
         <div className="space-y-4">
+          <Card>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="text-base font-semibold">Статус задачи</h2>
+              <Badge>{statusLabels[task.status]}</Badge>
+            </div>
+            <TaskStatusQuickActions taskId={task.id} status={task.status} />
+          </Card>
+
           <Card>
             <div className="mb-4 flex items-center justify-between gap-3">
               <h2 className="text-base font-semibold">Чеклист</h2>
@@ -192,7 +224,7 @@ export default async function TaskDetailsPage({ params }: { params: Promise<{ ta
           <Card>
             <h2 className="mb-4 text-base font-semibold">История</h2>
             <div className="space-y-3">
-              {task.history.length === 0 && <p className="text-sm text-muted">История пока пуста.</p>}
+              {task.history.length === 0 && <p className="text-sm text-muted">История пока пустая.</p>}
               {task.history.map((event) => (
                 <div key={event.id} className="rounded-md bg-surface p-3">
                   <div className="text-sm font-medium">{event.field}</div>

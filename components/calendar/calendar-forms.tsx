@@ -27,10 +27,10 @@ const typeOptions: { value: CalendarEventType; label: string }[] = [
   { value: "REMINDER", label: "Напоминание" }
 ];
 
-export function CalendarEventCreateForm({ users }: { users: UserOption[] }) {
+export function CalendarEventCreateForm({ users, canManageCalendar = true }: { users: UserOption[]; canManageCalendar?: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [type, setType] = useState<CalendarEventType>("EVENT");
+  const [type, setType] = useState<CalendarEventType>(canManageCalendar ? "EVENT" : "REMINDER");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [startsAt, setStartsAt] = useState(toDateTimeLocalValue(new Date().toISOString()));
@@ -42,14 +42,14 @@ export function CalendarEventCreateForm({ users }: { users: UserOption[] }) {
   const canSubmit = useMemo(() => title.trim().length >= 2 && startsAt && !loading, [title, startsAt, loading]);
 
   const reset = useCallback(() => {
-    setType("EVENT");
+    setType(canManageCalendar ? "EVENT" : "REMINDER");
     setTitle("");
     setDescription("");
     setStartsAt(toDateTimeLocalValue(new Date().toISOString()));
     setEndsAt("");
     setAssigneeId("");
     setError("");
-  }, []);
+  }, [canManageCalendar]);
 
   const closeCreateForm = useCallback(() => {
     reset();
@@ -78,12 +78,12 @@ export function CalendarEventCreateForm({ users }: { users: UserOption[] }) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        type,
+        type: canManageCalendar ? type : "REMINDER",
         title: title.trim(),
         description: description.trim() || null,
         startsAt: new Date(startsAt).toISOString(),
         endsAt: endsAt ? new Date(endsAt).toISOString() : null,
-        assigneeId: assigneeId || null
+        assigneeId: canManageCalendar ? assigneeId || null : null
       })
     });
 
@@ -107,7 +107,7 @@ export function CalendarEventCreateForm({ users }: { users: UserOption[] }) {
         className="inline-flex h-10 items-center gap-2 rounded-md bg-brand px-4 text-sm font-semibold text-surface transition hover:bg-emerald-300"
       >
         <Plus size={18} />
-        Новое событие
+        {canManageCalendar ? "Новое событие" : "Новое напоминание"}
       </button>
     );
   }
@@ -119,7 +119,7 @@ export function CalendarEventCreateForm({ users }: { users: UserOption[] }) {
         onMouseDown={(mouseEvent) => mouseEvent.stopPropagation()}
         className="max-h-[calc(100vh-2rem)] w-full max-w-2xl space-y-4 overflow-y-auto rounded-lg border border-stroke bg-panel p-5 shadow-2xl"
       >
-        <FormHeader title="Новое событие" onClose={() => { reset(); setOpen(false); }} />
+        <FormHeader title={canManageCalendar ? "Новое событие" : "Новое напоминание"} onClose={() => { reset(); setOpen(false); }} />
         <EventFields
           type={type}
           setType={setType}
@@ -134,6 +134,7 @@ export function CalendarEventCreateForm({ users }: { users: UserOption[] }) {
           assigneeId={assigneeId}
           setAssigneeId={setAssigneeId}
           users={users}
+          canManageCalendar={canManageCalendar}
         />
         {error && <div className="text-sm text-danger">{error}</div>}
         <div className="flex justify-end gap-2">
@@ -273,6 +274,7 @@ export function CalendarEventEditForm({ event, users }: { event: EditableEvent; 
         assigneeId={assigneeId}
         setAssigneeId={setAssigneeId}
         users={users}
+        canManageCalendar
       />
       {error && <div className="text-sm text-danger">{error}</div>}
       <div className="flex flex-wrap justify-end gap-2">
@@ -306,7 +308,8 @@ function EventFields({
   setEndsAt,
   assigneeId,
   setAssigneeId,
-  users
+  users,
+  canManageCalendar
 }: {
   type: CalendarEventType;
   setType: (value: CalendarEventType) => void;
@@ -321,7 +324,9 @@ function EventFields({
   assigneeId: string;
   setAssigneeId: (value: string) => void;
   users: UserOption[];
+  canManageCalendar: boolean;
 }) {
+  const visibleTypeOptions = canManageCalendar ? typeOptions : typeOptions.filter((option) => option.value === "REMINDER");
   return (
     <>
       <div className="grid gap-3 md:grid-cols-2">
@@ -332,7 +337,7 @@ function EventFields({
             onChange={(event) => setType(event.target.value as CalendarEventType)}
             className="h-10 w-full rounded-md border border-stroke bg-surface px-3 text-sm outline-none transition focus:border-brand"
           >
-            {typeOptions.map((option) => (
+            {visibleTypeOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>

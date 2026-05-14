@@ -4,7 +4,8 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { taskScopeFor } from "@/lib/data-scope";
 import { prisma } from "@/lib/prisma";
-import { canSeeAllCompanyData, hasPermission } from "@/lib/permissions";
+import { canSeeAllCompanyData, hasUserPermission } from "@/lib/permissions";
+import { markOverdueTasks } from "@/lib/tasks-maintenance";
 
 const createSchema = z.object({
   title: z.string().min(3),
@@ -19,6 +20,7 @@ const createSchema = z.object({
 
 export async function GET() {
   const user = await requireUser();
+  await markOverdueTasks(user.companyId);
   const tasks = await prisma.task.findMany({
     where: taskScopeFor(user),
     include: { assignee: true, creator: true, project: true, department: true },
@@ -30,7 +32,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const user = await requireUser();
-  if (!hasPermission(user.role.code, "tasks:manage")) {
+  if (!hasUserPermission(user, "tasks:manage")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -61,7 +63,11 @@ export async function POST(request: Request) {
         id: parsed.data.assigneeId,
         companyId: user.companyId,
         isActive: true,
-        ...(canSeeAllCompanyData(user.role.code) ? {} : { departmentId: user.departmentId })
+        ...(user.role.code === "FOREMAN"
+          ? { role: { code: { notIn: ["DEVELOPER", "MANAGER"] } } }
+          : canSeeAllCompanyData(user.role.code)
+            ? {}
+            : { departmentId: user.departmentId })
       },
       select: { id: true }
     });

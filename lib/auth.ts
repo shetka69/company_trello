@@ -1,9 +1,9 @@
 import "server-only";
 
 import { redirect } from "next/navigation";
-import type { Prisma, RoleCode } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { hasPermission, type Permission } from "@/lib/permissions";
+import { hasUserPermission, type Permission } from "@/lib/permissions";
 import { readSession } from "@/lib/session";
 
 export type CurrentUser = Prisma.UserGetPayload<{
@@ -11,6 +11,12 @@ export type CurrentUser = Prisma.UserGetPayload<{
     role: true;
     department: true;
     company: true;
+    permissionOverrides: {
+      select: {
+        permission: true;
+        enabled: true;
+      };
+    };
   };
 }>;
 
@@ -27,7 +33,13 @@ export async function getCurrentUser() {
     include: {
       role: true,
       department: true,
-      company: true
+      company: true,
+      permissionOverrides: {
+        select: {
+          permission: true,
+          enabled: true
+        }
+      }
     }
   });
 }
@@ -38,8 +50,8 @@ export async function requireUser() {
   return user;
 }
 
-export function requirePermission(role: RoleCode, permission: Permission) {
-  if (!hasPermission(role, permission)) {
+export function requirePermission(user: CurrentUser, permission: Permission) {
+  if (!hasUserPermission(user, permission)) {
     redirect("/app");
   }
 }

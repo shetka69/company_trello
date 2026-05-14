@@ -18,6 +18,7 @@ enum RoleCode {
 }
 
 enum TaskType {
+  PRIVATE
   PERSONAL
   TEAM
   DEPARTMENT
@@ -82,6 +83,7 @@ model Company {
   deliveries  Delivery[]
   logs        ActivityLog[]
   notifications Notification[]
+  userPermissions UserPermission[]
 }
 
 model Department {
@@ -135,9 +137,26 @@ model User {
   logs           ActivityLog[]
   taskHistory    TaskHistory[]
   projectMemberships ProjectMember[]
+  permissionOverrides UserPermission[]
 
   @@index([companyId])
   @@index([roleId])
+}
+
+model UserPermission {
+  id         String   @id @default(cuid())
+  companyId  String
+  userId     String
+  permission String
+  enabled    Boolean
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  company    Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permission])
+  @@index([companyId, permission])
 }
 
 model Project {

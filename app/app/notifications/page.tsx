@@ -45,7 +45,7 @@ export default async function NotificationsPage({
   searchParams?: Promise<{ filter?: string }>;
 }) {
   const user = await requireUser();
-  requirePermission(user.role.code, "notifications:read");
+  requirePermission(user, "notifications:read");
   const params = await searchParams;
   const filter = params?.filter === "all" ? "all" : "unread";
   const baseWhere = {

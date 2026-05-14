@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
-import { hasPermission } from "@/lib/permissions";
+import { hasUserPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
@@ -10,7 +10,7 @@ const schema = z.object({
 
 export async function PATCH(request: Request, context: { params: Promise<{ departmentId: string }> }) {
   const user = await requireUser();
-  if (!hasPermission(user.role.code, "users:manage")) {
+  if (!hasUserPermission(user, "users:manage")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -50,7 +50,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ depar
 
 export async function DELETE(_request: Request, context: { params: Promise<{ departmentId: string }> }) {
   const user = await requireUser();
-  if (!hasPermission(user.role.code, "users:manage")) {
+  if (!hasUserPermission(user, "users:manage")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

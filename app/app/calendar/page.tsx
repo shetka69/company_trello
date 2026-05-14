@@ -3,10 +3,11 @@ import type { CalendarEventType } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { CalendarEventCreateForm, CalendarEventEditForm } from "@/components/calendar/calendar-forms";
-import { requirePermission, requireUser } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { taskScopeFor } from "@/lib/data-scope";
-import { hasPermission } from "@/lib/permissions";
+import { canSeeAllCompanyData, hasUserPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { markOverdueTasks } from "@/lib/tasks-maintenance";
 import { formatDate } from "@/lib/utils";
 
 type ViewMode = "day" | "week" | "month";
@@ -35,26 +36,45 @@ export default async function CalendarPage({
   searchParams?: Promise<{ mode?: string; date?: string; types?: string }>;
 }) {
   const user = await requireUser();
-  requirePermission(user.role.code, "calendar:read");
+  await markOverdueTasks(user.companyId);
   const params = await searchParams;
   const mode = parseMode(params?.mode);
   const anchor = parseAnchorDate(params?.date);
   const selectedTypes = parseTypes(params?.types);
   const range = getRange(mode, anchor);
-  const canManageCalendar = hasPermission(user.role.code, "calendar:manage");
+  const canReadCalendar = hasUserPermission(user, "calendar:read");
+  const canManageCalendar = hasUserPermission(user, "calendar:manage");
+  const canSeeAllCalendarData = canSeeAllCompanyData(user.role.code);
   const selectedEventTypes = selectedTypes.filter((type): type is "EVENT" | "REMINDER" => type === "EVENT" || type === "REMINDER");
-  const showTaskDeadlines = selectedTypes.includes("TASK_DEADLINE");
-  const showDeliveries = selectedTypes.includes("DELIVERY");
+  const showTaskDeadlines = canReadCalendar && selectedTypes.includes("TASK_DEADLINE");
+  const showDeliveries = canReadCalendar && selectedTypes.includes("DELIVERY");
 
   const [events, deadlineTasks, deliveries, users] = await Promise.all([
-    prisma.calendarEvent.findMany({
-      where: {
-        companyId: user.companyId,
-        startsAt: { gte: range.start, lt: range.end },
-        type: { in: selectedEventTypes }
-      },
-      orderBy: { startsAt: "asc" }
-    }),
+    selectedEventTypes.length > 0
+      ? prisma.calendarEvent.findMany({
+          where: {
+            companyId: user.companyId,
+            startsAt: { gte: range.start, lt: range.end },
+            OR: [
+              ...(canReadCalendar && selectedEventTypes.includes("EVENT") ? [{ type: "EVENT" as const }] : []),
+              ...(selectedEventTypes.includes("REMINDER")
+                ? [
+                    {
+                      type: "REMINDER" as const,
+                      OR: [
+                        ...(canSeeAllCalendarData ? [{}] : []),
+                        { creatorId: user.id },
+                        { assigneeId: user.id },
+                        ...(canReadCalendar ? [{ assigneeId: null }] : [])
+                      ]
+                    }
+                  ]
+                : [])
+            ]
+          },
+          orderBy: { startsAt: "asc" }
+        })
+      : [],
     showTaskDeadlines
       ? prisma.task.findMany({
           where: {
@@ -80,7 +100,7 @@ export default async function CalendarPage({
           select: { id: true, name: true },
           orderBy: { name: "asc" }
         })
-      : []
+      : [{ id: user.id, name: user.name }]
   ]);
 
   return (
@@ -90,7 +110,7 @@ export default async function CalendarPage({
           <h1 className="text-2xl font-semibold tracking-tight">Календарь</h1>
           <p className="mt-1 text-sm text-muted">{range.title}</p>
         </div>
-        {canManageCalendar && <CalendarEventCreateForm users={users} />}
+        <CalendarEventCreateForm users={users} canManageCalendar={canManageCalendar} />
       </div>
 
       <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
@@ -147,7 +167,7 @@ export default async function CalendarPage({
               <div className="space-y-2">
                 {dayEvents.length === 0 && dayTasks.length === 0 && dayDeliveries.length === 0 && <p className="text-sm text-muted">Нет событий</p>}
                 {dayEvents.map((event) => (
-                  <CalendarEventCard key={event.id} event={event} canManageCalendar={canManageCalendar} users={users} />
+                  <CalendarEventCard key={event.id} event={event} canManageCalendar={canManageCalendar} currentUserId={user.id} users={users} />
                 ))}
                 {dayTasks.map((task) => (
                   <Link key={task.id} href={`/app/tasks/${task.id}`} className="block min-w-0 rounded-md bg-surface p-3 transition hover:bg-panelSoft">
@@ -183,6 +203,7 @@ export default async function CalendarPage({
 function CalendarEventCard({
   event,
   canManageCalendar,
+  currentUserId,
   users
 }: {
   event: {
@@ -192,12 +213,15 @@ function CalendarEventCard({
     description: string | null;
     startsAt: Date;
     endsAt: Date | null;
+    creatorId: string | null;
     assigneeId: string | null;
   };
   canManageCalendar: boolean;
+  currentUserId: string;
   users: { id: string; name: string }[];
 }) {
   const type = event.type === "REMINDER" ? "REMINDER" : "EVENT";
+  const canEditEvent = canManageCalendar || (type === "REMINDER" && (event.creatorId === currentUserId || event.assigneeId === currentUserId));
 
   return (
     <div className="min-w-0 rounded-md bg-surface p-3">
@@ -207,7 +231,7 @@ function CalendarEventCard({
       </div>
       <div className="mt-2 min-w-0 text-sm font-medium [overflow-wrap:anywhere]">{event.title}</div>
       {event.description && <div className="mt-1 min-w-0 text-xs leading-5 text-muted [overflow-wrap:anywhere]">{event.description}</div>}
-      {canManageCalendar && (
+      {canEditEvent && (
         <CalendarEventEditForm
           event={{
             id: event.id,

@@ -14,6 +14,21 @@ export type Permission =
   | "audit:read"
   | "system:develop";
 
+export const permissions: Permission[] = [
+  "dashboard:read",
+  "tasks:read",
+  "tasks:manage",
+  "calendar:read",
+  "calendar:manage",
+  "inventory:read",
+  "inventory:manage",
+  "notifications:read",
+  "roadmap:read",
+  "users:manage",
+  "audit:read",
+  "system:develop"
+];
+
 export const permissionLabels: Record<Permission, string> = {
   "roadmap:read": "План развития",
   "dashboard:read": "Главная панель",
@@ -91,6 +106,15 @@ export const permissionsByRole: Record<RoleCode, Permission[]> = {
 
 export function hasPermission(role: RoleCode, permission: Permission) {
   return permissionsByRole[role].includes(permission);
+}
+
+export function hasUserPermission(
+  user: { role: { code: RoleCode }; permissionOverrides?: { permission: string; enabled: boolean }[] },
+  permission: Permission
+) {
+  const override = user.permissionOverrides?.find((item) => item.permission === permission);
+  if (override) return override.enabled;
+  return hasPermission(user.role.code, permission);
 }
 
 export function canSeeAllCompanyData(role: RoleCode) {

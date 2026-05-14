@@ -1,18 +1,19 @@
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { DepartmentCreateForm, DepartmentEditForm, UserCreateForm, UserEditForm } from "@/components/settings/settings-forms";
+import { DepartmentCreateForm, DepartmentEditForm, PermissionToggleGrid, UserCreateForm, UserEditForm } from "@/components/settings/settings-forms";
 import { requirePermission, requireUser } from "@/lib/auth";
-import { permissionLabels, permissionsByRole, roleLabels } from "@/lib/permissions";
+import { hasUserPermission, permissionLabels, permissionsByRole, roleLabels } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
 export default async function SettingsPage() {
   const user = await requireUser();
-  requirePermission(user.role.code, "users:manage");
+  requirePermission(user, "users:manage");
+  const canDevelopSystem = hasUserPermission(user, "system:develop");
 
   const [users, departments, roles] = await Promise.all([
     prisma.user.findMany({
       where: { companyId: user.companyId },
-      include: { role: true, department: true },
+      include: { role: true, department: true, permissionOverrides: { select: { permission: true, enabled: true } } },
       orderBy: { name: "asc" }
     }),
     prisma.department.findMany({
@@ -62,11 +63,26 @@ export default async function SettingsPage() {
                   departmentId: employee.departmentId,
                   telegramChatId: employee.telegramChatId,
                   isActive: employee.isActive,
-                  role: { code: employee.role.code }
+                  role: { code: employee.role.code },
+                  permissionOverrides: employee.permissionOverrides
                 }}
                 roles={roles}
                 departments={departments}
               />
+              {canDevelopSystem && (
+                <PermissionToggleGrid
+                  employee={{
+                    id: employee.id,
+                    name: employee.name,
+                    email: employee.email,
+                    departmentId: employee.departmentId,
+                    telegramChatId: employee.telegramChatId,
+                    isActive: employee.isActive,
+                    role: { code: employee.role.code },
+                    permissionOverrides: employee.permissionOverrides
+                  }}
+                />
+              )}
             </div>
           ))}
         </div>

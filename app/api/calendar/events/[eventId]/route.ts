@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
-import { hasPermission } from "@/lib/permissions";
+import { hasUserPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
@@ -15,9 +15,7 @@ const schema = z.object({
 
 export async function PATCH(request: Request, context: { params: Promise<{ eventId: string }> }) {
   const user = await requireUser();
-  if (!hasPermission(user.role.code, "calendar:manage")) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const canManageCalendar = hasUserPermission(user, "calendar:manage");
 
   const { eventId } = await context.params;
   const parsed = schema.safeParse(await request.json());
@@ -27,16 +25,27 @@ export async function PATCH(request: Request, context: { params: Promise<{ event
 
   const event = await prisma.calendarEvent.findFirst({
     where: { id: eventId, companyId: user.companyId },
-    select: { id: true, title: true }
+    select: { id: true, title: true, type: true, creatorId: true, assigneeId: true }
   });
 
   if (!event) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  if (parsed.data.assigneeId) {
+  const canEditOwnReminder = event.type === "REMINDER" && (event.creatorId === user.id || event.assigneeId === user.id);
+  if (!canManageCalendar && !canEditOwnReminder) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  if (!canManageCalendar && parsed.data.type && parsed.data.type !== "REMINDER") {
+    return NextResponse.json({ error: "Only private reminders are allowed" }, { status: 403 });
+  }
+
+  const assigneeId = canManageCalendar ? parsed.data.assigneeId : user.id;
+
+  if (assigneeId) {
     const assignee = await prisma.user.findFirst({
-      where: { id: parsed.data.assigneeId, companyId: user.companyId, isActive: true },
+      where: { id: assigneeId, companyId: user.companyId, isActive: true },
       select: { id: true }
     });
 
@@ -48,8 +57,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ event
   const updated = await prisma.calendarEvent.update({
     where: { id: event.id },
     data: {
-      assigneeId: parsed.data.assigneeId,
-      type: parsed.data.type,
+      assigneeId,
+      type: canManageCalendar ? parsed.data.type : "REMINDER",
       title: parsed.data.title?.trim(),
       description: parsed.data.description === undefined ? undefined : parsed.data.description?.trim() || null,
       startsAt: parsed.data.startsAt ? new Date(parsed.data.startsAt) : undefined,
@@ -73,18 +82,21 @@ export async function PATCH(request: Request, context: { params: Promise<{ event
 
 export async function DELETE(_request: Request, context: { params: Promise<{ eventId: string }> }) {
   const user = await requireUser();
-  if (!hasPermission(user.role.code, "calendar:manage")) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const canManageCalendar = hasUserPermission(user, "calendar:manage");
 
   const { eventId } = await context.params;
   const event = await prisma.calendarEvent.findFirst({
     where: { id: eventId, companyId: user.companyId },
-    select: { id: true, title: true, companyId: true }
+    select: { id: true, title: true, companyId: true, type: true, creatorId: true, assigneeId: true }
   });
 
   if (!event) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  const canDeleteOwnReminder = event.type === "REMINDER" && (event.creatorId === user.id || event.assigneeId === user.id);
+  if (!canManageCalendar && !canDeleteOwnReminder) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   await prisma.$transaction([

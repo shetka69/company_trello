@@ -11,13 +11,24 @@ export function taskScopeFor(user: CurrentUser) {
   if (canSeeDepartmentData(role) && user.departmentId) {
     return {
       companyId: user.companyId,
-      OR: [{ departmentId: user.departmentId }, { assigneeId: user.id }, { creatorId: user.id }]
+      OR: [
+        { type: "PRIVATE" as const, creatorId: user.id },
+        { type: "DEPARTMENT" as const, departmentId: user.departmentId },
+        {
+          type: { notIn: ["PRIVATE" as const, "DEPARTMENT" as const] },
+          OR: [{ departmentId: user.departmentId }, { assigneeId: user.id }, { creatorId: user.id }]
+        }
+      ]
     };
   }
 
   return {
     companyId: user.companyId,
-    OR: [{ assigneeId: user.id }, { creatorId: user.id }]
+    OR: [
+      { type: "PRIVATE" as const, creatorId: user.id },
+      ...(user.departmentId ? [{ type: "DEPARTMENT" as const, departmentId: user.departmentId }] : []),
+      { type: { notIn: ["PRIVATE" as const, "DEPARTMENT" as const] }, OR: [{ assigneeId: user.id }, { creatorId: user.id }] }
+    ]
   };
 }
 

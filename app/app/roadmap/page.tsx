@@ -1,4 +1,4 @@
-import { Barcode, CheckCircle2, Clock3, QrCode, ScanLine, ShieldAlert, Truck } from "lucide-react";
+import { Archive, Barcode, CheckCircle2, Clock3, QrCode, ScanLine, ShieldAlert, Truck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { requirePermission, requireUser } from "@/lib/auth";
@@ -21,11 +21,19 @@ const roadmapItems = [
     points: ["Сканирование с телефона", "Выдача без ручного поиска", "Быстрый возврат", "Отметка ответственного"]
   },
   {
+    title: "Большой архив колонок и чертежей",
+    status: "База знаний",
+    icon: Archive,
+    description:
+      "Единый архив всех акустических систем: карточки колонок, чертежи, паспорта, фото, спецификации, измерения, комплектующие и история изменений по каждой модели.",
+    points: ["Чертежи и версии", "Паспорта изделий", "Данные по комплектующим", "История изменений"]
+  },
+  {
     title: "Учет брака и замечаний",
     status: "Полезно для контроля",
     icon: ShieldAlert,
     description:
-      "Фиксация брака, дефектов, замечаний после проверки и связи этой информации с конкретной акустической системой.",
+      "Фиксация брака, дефектов и замечаний после проверки с привязкой к конкретной акустической системе.",
     points: ["Тип брака", "Фото дефекта", "Кто обнаружил", "Статус исправления"]
   },
   {
@@ -56,7 +64,7 @@ const roadmapItems = [
 
 export default async function RoadmapPage() {
   const user = await requireUser();
-  requirePermission(user.role.code, "roadmap:read");
+  requirePermission(user, "roadmap:read");
 
   return (
     <div className="space-y-6">
@@ -80,8 +88,7 @@ export default async function RoadmapPage() {
             </div>
             <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">
               На каждую акустическую систему можно создавать отдельный QR-код. После сканирования открывается карточка изделия: где оно находится, кому выдано,
-              какие комплектующие использованы, были ли замечания, брак, ремонт или возврат. Это убирает ручной поиск и дает прозрачную историю по каждому
-              изделию.
+              какие комплектующие использованы, были ли замечания, брак, ремонт или возврат. Это убирает ручной поиск и дает прозрачную историю по каждому изделию.
             </p>
           </div>
         </div>

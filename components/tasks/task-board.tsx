@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { DndContext, useDraggable, useDroppable, type DragEndEvent } from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +9,7 @@ import { formatDate } from "@/lib/utils";
 
 type TaskStatus = "NEW" | "IN_PROGRESS" | "REVIEW" | "DONE" | "OVERDUE";
 type Priority = "LOW" | "NORMAL" | "HIGH" | "CRITICAL";
+type TaskType = "PRIVATE" | "PERSONAL" | "TEAM" | "DEPARTMENT" | "PROJECT";
 
 type BoardTask = {
   id: string;
@@ -17,9 +17,18 @@ type BoardTask = {
   description: string | null;
   status: TaskStatus;
   priority: Priority;
+  type: TaskType;
   dueAt: string | null;
   assignee: { name: string } | null;
   project: { name: string } | null;
+};
+
+const typeLabels: Record<TaskType, string> = {
+  PRIVATE: "Приватная",
+  PERSONAL: "Личная",
+  TEAM: "Команда",
+  DEPARTMENT: "Отдел",
+  PROJECT: "Проект"
 };
 
 const columns: { id: TaskStatus; label: string }[] = [
@@ -33,54 +42,46 @@ const columns: { id: TaskStatus; label: string }[] = [
 const priorityLabels: Record<Priority, string> = {
   LOW: "Низкий",
   NORMAL: "Обычный",
-  HIGH: "Высокий",
-  CRITICAL: "Критичный"
+  HIGH: "Важный",
+  CRITICAL: "Критический"
 };
 
 function priorityVariant(priority: Priority) {
   if (priority === "CRITICAL") return "red" as const;
-  if (priority === "HIGH") return "amber" as const;
+  if (priority === "HIGH") return "red" as const;
   if (priority === "LOW") return "blue" as const;
   return "neutral" as const;
 }
 
-function DraggableCard({ task }: { task: BoardTask }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id });
-  const style = { transform: CSS.Translate.toString(transform) };
+function cardStyle(task: BoardTask) {
+  if (task.priority === "CRITICAL") {
+    return "border-red-300/60 bg-red-400/15 shadow-[inset_4px_0_0_rgba(248,113,113,0.95)]";
+  }
 
-  return (
-    <article
-      ref={setNodeRef}
-      style={style}
-      {...listeners}
-      {...attributes}
-      className={`min-w-0 cursor-grab rounded-lg border border-stroke bg-surface p-4 shadow-sm transition ${isDragging ? "opacity-60" : ""}`}
-    >
-      <div className="mb-3 flex min-w-0 items-start justify-between gap-2">
-        <h3 className="min-w-0 text-sm font-semibold leading-5 [overflow-wrap:anywhere]">{task.title}</h3>
-        <span className="shrink-0">
-          <Badge variant={priorityVariant(task.priority)}>{priorityLabels[task.priority]}</Badge>
-        </span>
-      </div>
-      {task.description && <p className="line-clamp-2 text-sm leading-5 text-muted">{task.description}</p>}
-      <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted">
-        <span className="rounded-md bg-panelSoft px-2 py-1">{formatDate(task.dueAt)}</span>
-        {task.assignee && <span className="rounded-md bg-panelSoft px-2 py-1">{task.assignee.name}</span>}
-        {task.project && <span className="rounded-md bg-panelSoft px-2 py-1">{task.project.name}</span>}
-      </div>
-      <Link
-        href={`/app/tasks/${task.id}`}
-        className="mt-3 inline-flex text-xs font-medium text-brand transition hover:text-emerald-200"
-        onClick={(event) => event.stopPropagation()}
-        onPointerDown={(event) => event.stopPropagation()}
-      >
-        Открыть
-      </Link>
-    </article>
-  );
+  if (task.priority === "HIGH") {
+    return "border-rose-300/55 bg-rose-300/10 shadow-[inset_4px_0_0_rgba(251,113,133,0.9)]";
+  }
+
+  const styles: Record<TaskType, string> = {
+    PRIVATE: "border-fuchsia-300/45 bg-fuchsia-300/10 shadow-[inset_4px_0_0_rgba(240,171,252,0.8)]",
+    PERSONAL: "border-blue-300/40 bg-blue-300/10 shadow-[inset_4px_0_0_rgba(147,197,253,0.75)]",
+    TEAM: "border-emerald-300/40 bg-emerald-300/10 shadow-[inset_4px_0_0_rgba(110,231,183,0.75)]",
+    DEPARTMENT: "border-amber-300/45 bg-amber-300/10 shadow-[inset_4px_0_0_rgba(252,211,77,0.8)]",
+    PROJECT: "border-cyan-300/40 bg-cyan-300/10 shadow-[inset_4px_0_0_rgba(103,232,249,0.75)]"
+  };
+
+  return styles[task.type];
 }
 
-function MobileTaskCard({
+function getAdjacentStatuses(status: TaskStatus) {
+  const currentIndex = columns.findIndex((column) => column.id === status);
+  return {
+    previousStatus: currentIndex > 0 ? columns[currentIndex - 1] : null,
+    nextStatus: currentIndex >= 0 && currentIndex < columns.length - 1 ? columns[currentIndex + 1] : null
+  };
+}
+
+function TaskCard({
   task,
   updating,
   onStatusChange
@@ -89,81 +90,97 @@ function MobileTaskCard({
   updating: boolean;
   onStatusChange: (taskId: string, nextStatus: TaskStatus) => void;
 }) {
-  const currentIndex = columns.findIndex((column) => column.id === task.status);
-  const previousStatus = currentIndex > 0 ? columns[currentIndex - 1] : null;
-  const nextStatus = currentIndex >= 0 && currentIndex < columns.length - 1 ? columns[currentIndex + 1] : null;
+  const { previousStatus, nextStatus } = getAdjacentStatuses(task.status);
 
   return (
-    <article className="rounded-lg border border-stroke bg-surface p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+    <article className={`relative min-w-0 rounded-lg border bg-surface p-4 shadow-sm transition hover:border-brand/60 ${cardStyle(task)}`}>
+      <Link href={`/app/tasks/${task.id}`} className="absolute inset-0 rounded-lg" aria-label={`Открыть задачу ${task.title}`} />
+
+      <div className="pointer-events-none relative z-10">
+        <div className="mb-3 flex min-w-0 items-start justify-between gap-2">
           <h3 className="min-w-0 text-sm font-semibold leading-5 [overflow-wrap:anywhere]">{task.title}</h3>
-          <div className="mt-2 flex flex-wrap gap-2">
+          <span className="shrink-0">
             <Badge variant={priorityVariant(task.priority)}>{priorityLabels[task.priority]}</Badge>
-            <Badge>{columns.find((column) => column.id === task.status)?.label}</Badge>
-          </div>
+          </span>
+        </div>
+        <div className="mb-3 flex flex-wrap gap-2">
+          <span className="rounded-md border border-stroke bg-panel/70 px-2 py-1 text-xs text-muted">{typeLabels[task.type]}</span>
+          <span className="rounded-md border border-stroke bg-panel/70 px-2 py-1 text-xs text-muted">{columns.find((column) => column.id === task.status)?.label}</span>
+        </div>
+        {task.description && <p className="line-clamp-2 text-sm leading-5 text-muted [overflow-wrap:anywhere]">{task.description}</p>}
+        <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted">
+          <span className="rounded-md bg-panelSoft px-2 py-1">{formatDate(task.dueAt)}</span>
+          {task.assignee && <span className="rounded-md bg-panelSoft px-2 py-1">{task.assignee.name}</span>}
+          {task.project && <span className="rounded-md bg-panelSoft px-2 py-1">{task.project.name}</span>}
         </div>
       </div>
-      {task.description && <p className="mt-3 line-clamp-3 text-sm leading-5 text-muted">{task.description}</p>}
-      <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted">
-        <span className="rounded-md bg-panelSoft px-2 py-1">{formatDate(task.dueAt)}</span>
-        {task.assignee && <span className="rounded-md bg-panelSoft px-2 py-1">{task.assignee.name}</span>}
-        {task.project && <span className="rounded-md bg-panelSoft px-2 py-1">{task.project.name}</span>}
-      </div>
-      <div className="mt-4 grid gap-2">
-        <label className="block">
-          <span className="mb-2 block text-xs text-muted">Статус</span>
-          <select
-            value={task.status}
-            disabled={updating}
-            onChange={(event) => onStatusChange(task.id, event.target.value as TaskStatus)}
-            className="h-10 w-full rounded-md border border-stroke bg-panel px-3 text-sm outline-none transition focus:border-brand disabled:opacity-60"
-          >
-            {columns.map((column) => (
-              <option key={column.id} value={column.id}>
-                {column.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            disabled={!previousStatus || updating}
-            onClick={() => previousStatus && onStatusChange(task.id, previousStatus.id)}
-            className="h-10 rounded-md border border-stroke px-3 text-sm font-medium text-muted transition hover:text-text disabled:opacity-40"
-          >
-            Назад
-          </button>
-          <button
-            type="button"
-            disabled={!nextStatus || updating}
-            onClick={() => nextStatus && onStatusChange(task.id, nextStatus.id)}
-            className="h-10 rounded-md bg-brand px-3 text-sm font-semibold text-surface transition hover:bg-emerald-300 disabled:opacity-40"
-          >
-            Дальше
-          </button>
-        </div>
-        <Link href={`/app/tasks/${task.id}`} className="inline-flex h-10 items-center justify-center rounded-md border border-stroke text-sm font-medium text-muted transition hover:text-text">
-          Открыть задачу
-        </Link>
+
+      <div className="relative z-20 mt-4 grid grid-cols-2 gap-2">
+        <StatusButton
+          label={previousStatus ? previousStatus.label : "Назад"}
+          icon="left"
+          disabled={!previousStatus || updating}
+          onClick={() => previousStatus && onStatusChange(task.id, previousStatus.id)}
+        />
+        <StatusButton
+          label={nextStatus ? nextStatus.label : "Дальше"}
+          icon="right"
+          disabled={!nextStatus || updating}
+          onClick={() => nextStatus && onStatusChange(task.id, nextStatus.id)}
+        />
       </div>
     </article>
   );
 }
 
-function DroppableColumn({ status, label, tasks }: { status: TaskStatus; label: string; tasks: BoardTask[] }) {
-  const { setNodeRef, isOver } = useDroppable({ id: status });
+function StatusButton({
+  label,
+  icon,
+  disabled,
+  onClick
+}: {
+  label: string;
+  icon: "left" | "right";
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  const Icon = icon === "left" ? ArrowLeft : ArrowRight;
 
   return (
-    <section ref={setNodeRef} className={`min-h-[420px] rounded-lg border border-stroke bg-panel p-3 ${isOver ? "border-brand" : ""}`}>
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className="inline-flex h-9 min-w-0 items-center justify-center gap-2 rounded-md border border-stroke bg-panel px-2 text-xs font-medium text-muted transition hover:border-brand hover:text-text disabled:cursor-not-allowed disabled:opacity-35"
+      title={label}
+    >
+      {icon === "left" && <Icon size={14} />}
+      <span className="truncate">{label}</span>
+      {icon === "right" && <Icon size={14} />}
+    </button>
+  );
+}
+
+function Column({
+  label,
+  tasks,
+  updatingTaskId,
+  onStatusChange
+}: {
+  label: string;
+  tasks: BoardTask[];
+  updatingTaskId: string | null;
+  onStatusChange: (taskId: string, nextStatus: TaskStatus) => void;
+}) {
+  return (
+    <section className="min-h-[420px] rounded-lg border border-stroke bg-panel p-3">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-semibold">{label}</h2>
         <span className="rounded-md bg-panelSoft px-2 py-1 text-xs text-muted">{tasks.length}</span>
       </div>
       <div className="space-y-3">
         {tasks.map((task) => (
-          <DraggableCard key={task.id} task={task} />
+          <TaskCard key={task.id} task={task} updating={updatingTaskId === task.id} onStatusChange={onStatusChange} />
         ))}
       </div>
     </section>
@@ -214,29 +231,20 @@ export function TaskBoard({ tasks }: { tasks: BoardTask[] }) {
     router.refresh();
   }
 
-  async function onDragEnd(event: DragEndEvent) {
-    const taskId = String(event.active.id);
-    const nextStatus = event.over?.id as TaskStatus | undefined;
-    if (!nextStatus) return;
-    await updateTaskStatus(taskId, nextStatus);
-  }
-
   return (
     <>
       <div className="space-y-3 lg:hidden">
         {items.length === 0 && <div className="rounded-lg border border-stroke bg-panel p-4 text-sm text-muted">Задач пока нет</div>}
         {items.map((task) => (
-          <MobileTaskCard key={task.id} task={task} updating={updatingTaskId === task.id} onStatusChange={updateTaskStatus} />
+          <TaskCard key={task.id} task={task} updating={updatingTaskId === task.id} onStatusChange={updateTaskStatus} />
         ))}
       </div>
 
-      <DndContext onDragEnd={onDragEnd}>
-        <div className="hidden gap-4 overflow-x-auto pb-2 lg:grid lg:grid-cols-5">
-          {columns.map((column) => (
-            <DroppableColumn key={column.id} status={column.id} label={column.label} tasks={grouped[column.id]} />
-          ))}
-        </div>
-      </DndContext>
+      <div className="hidden gap-4 overflow-x-auto pb-2 lg:grid lg:grid-cols-5">
+        {columns.map((column) => (
+          <Column key={column.id} label={column.label} tasks={grouped[column.id]} updatingTaskId={updatingTaskId} onStatusChange={updateTaskStatus} />
+        ))}
+      </div>
     </>
   );
 }

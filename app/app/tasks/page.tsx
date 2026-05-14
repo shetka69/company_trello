@@ -8,11 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { requirePermission, requireUser } from "@/lib/auth";
 import { taskScopeFor } from "@/lib/data-scope";
-import { canSeeAllCompanyData, hasPermission } from "@/lib/permissions";
+import { canSeeAllCompanyData, hasUserPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { markOverdueTasks } from "@/lib/tasks-maintenance";
 import { formatDate } from "@/lib/utils";
 
-const statusLabels = {
+const statusLabels: Record<TaskStatus, string> = {
   NEW: "Новая",
   IN_PROGRESS: "В работе",
   REVIEW: "На проверке",
@@ -32,11 +33,18 @@ type SearchParams = {
 
 export default async function TasksPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
   const user = await requireUser();
-  requirePermission(user.role.code, "tasks:read");
+  requirePermission(user, "tasks:read");
+  await markOverdueTasks(user.companyId);
+
   const params = (await searchParams) ?? {};
-  const canManageTasks = hasPermission(user.role.code, "tasks:manage");
+  const canManageTasks = hasUserPermission(user, "tasks:manage");
   const companyWide = canSeeAllCompanyData(user.role.code);
-  const departmentFilter = companyWide ? {} : { departmentId: user.departmentId ?? undefined };
+  const assigneeFilter =
+    user.role.code === "FOREMAN"
+      ? { role: { code: { notIn: ["DEVELOPER" as const, "MANAGER" as const] } } }
+      : companyWide
+        ? {}
+        : { departmentId: user.departmentId ?? undefined };
   const where = buildTaskWhere(taskScopeFor(user), params, user.id);
   const orderBy = buildOrderBy(params.sort);
 
@@ -48,7 +56,7 @@ export default async function TasksPage({ searchParams }: { searchParams?: Promi
     }),
     canManageTasks
       ? prisma.user.findMany({
-          where: { companyId: user.companyId, isActive: true, ...departmentFilter },
+          where: { companyId: user.companyId, isActive: true, ...assigneeFilter },
           select: { id: true, name: true },
           orderBy: { name: "asc" }
         })
@@ -67,10 +75,7 @@ export default async function TasksPage({ searchParams }: { searchParams?: Promi
             ...(companyWide
               ? {}
               : {
-                  OR: [
-                    { members: { some: { userId: user.id } } },
-                    { tasks: { some: { departmentId: user.departmentId } } }
-                  ]
+                  OR: [{ members: { some: { userId: user.id } } }, { tasks: { some: { departmentId: user.departmentId } } }]
                 })
           },
           select: { id: true, name: true },
@@ -97,6 +102,7 @@ export default async function TasksPage({ searchParams }: { searchParams?: Promi
           description: task.description,
           status: task.status,
           priority: task.priority,
+          type: task.type,
           dueAt: task.dueAt?.toISOString() ?? null,
           assignee: task.assignee,
           project: task.project

@@ -4,7 +4,7 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { taskScopeFor } from "@/lib/data-scope";
 import { prisma } from "@/lib/prisma";
-import { hasPermission } from "@/lib/permissions";
+import { hasUserPermission } from "@/lib/permissions";
 
 const schema = z.object({
   taskId: z.string().min(1),
@@ -13,7 +13,7 @@ const schema = z.object({
 
 export async function PATCH(request: Request) {
   const user = await requireUser();
-  if (!hasPermission(user.role.code, "tasks:read")) {
+  if (!hasUserPermission(user, "tasks:read")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -33,7 +33,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const canManage = hasPermission(user.role.code, "tasks:manage");
+  const canManage = hasUserPermission(user, "tasks:manage");
   const canUpdateOwn = task.assigneeId === user.id || task.creatorId === user.id;
   if (!canManage && !canUpdateOwn) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });

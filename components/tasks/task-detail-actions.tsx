@@ -12,13 +12,13 @@ type Option = {
 
 type Priority = "LOW" | "NORMAL" | "HIGH" | "CRITICAL";
 type TaskStatus = "NEW" | "IN_PROGRESS" | "REVIEW" | "DONE" | "OVERDUE";
-type TaskType = "PERSONAL" | "TEAM" | "DEPARTMENT" | "PROJECT";
+type TaskType = "PRIVATE" | "PERSONAL" | "TEAM" | "DEPARTMENT" | "PROJECT";
 
 const priorityOptions: { value: Priority; label: string }[] = [
   { value: "LOW", label: "Низкий" },
   { value: "NORMAL", label: "Обычный" },
-  { value: "HIGH", label: "Высокий" },
-  { value: "CRITICAL", label: "Критичный" }
+  { value: "HIGH", label: "Важный" },
+  { value: "CRITICAL", label: "Критический" }
 ];
 
 const statusOptions: { value: TaskStatus; label: string }[] = [
@@ -30,6 +30,7 @@ const statusOptions: { value: TaskStatus; label: string }[] = [
 ];
 
 const typeOptions: { value: TaskType; label: string }[] = [
+  { value: "PRIVATE", label: "Приватная" },
   { value: "PERSONAL", label: "Личная" },
   { value: "TEAM", label: "Командная" },
   { value: "DEPARTMENT", label: "Отдел" },
@@ -155,37 +156,19 @@ export function TaskEditForm({
 
       <label className="block">
         <span className="mb-2 block text-sm text-muted">Название</span>
-        <input
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          className="h-10 w-full rounded-md border border-stroke bg-surface px-3 text-sm outline-none transition focus:border-brand"
-          minLength={3}
-          required
-        />
+        <input value={title} onChange={(event) => setTitle(event.target.value)} className="h-10 w-full rounded-md border border-stroke bg-surface px-3 text-sm outline-none transition focus:border-brand" minLength={3} required />
       </label>
 
       <label className="block">
         <span className="mb-2 block text-sm text-muted">Описание</span>
-        <textarea
-          value={description}
-          onChange={(event) => setDescription(event.target.value)}
-          className="min-h-24 w-full resize-y rounded-md border border-stroke bg-surface px-3 py-2 text-sm outline-none transition focus:border-brand"
-        />
+        <textarea value={description} onChange={(event) => setDescription(event.target.value)} className="min-h-24 w-full resize-y rounded-md border border-stroke bg-surface px-3 py-2 text-sm outline-none transition focus:border-brand" />
       </label>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Select label="Статус" value={status} onChange={(value) => setStatus(value as TaskStatus)} options={statusOptions} />
         <Select label="Приоритет" value={priority} onChange={(value) => setPriority(value as Priority)} options={priorityOptions} />
         <Select label="Тип" value={type} onChange={(value) => setType(value as TaskType)} options={typeOptions} />
-        <label className="block">
-          <span className="mb-2 block text-sm text-muted">Срок</span>
-          <input
-            value={dueAt}
-            onChange={(event) => setDueAt(event.target.value)}
-            className="h-10 w-full rounded-md border border-stroke bg-surface px-3 text-sm outline-none transition focus:border-brand"
-            type="datetime-local"
-          />
-        </label>
+        <DateField label="Срок" value={dueAt} onChange={setDueAt} />
       </div>
 
       <Select label="Исполнитель" value={assigneeId} onChange={setAssigneeId} options={assignees} placeholder="Не назначен" />
@@ -208,6 +191,59 @@ export function TaskEditForm({
         <Button disabled={!canSubmit}>{loading ? "Сохранение..." : "Сохранить"}</Button>
       </div>
     </form>
+  );
+}
+
+export function TaskStatusQuickActions({ taskId, status }: { taskId: string; status: TaskStatus }) {
+  const router = useRouter();
+  const [currentStatus, setCurrentStatus] = useState(status);
+  const [loadingStatus, setLoadingStatus] = useState<TaskStatus | null>(null);
+  const [error, setError] = useState("");
+
+  async function update(nextStatus: TaskStatus) {
+    if (nextStatus === currentStatus || loadingStatus) return;
+
+    setLoadingStatus(nextStatus);
+    setError("");
+
+    const response = await fetch("/api/tasks/status", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ taskId, status: nextStatus })
+    });
+
+    setLoadingStatus(null);
+
+    if (!response.ok) {
+      setError("Не удалось изменить статус.");
+      return;
+    }
+
+    setCurrentStatus(nextStatus);
+    router.refresh();
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+        {statusOptions.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            disabled={loadingStatus !== null || option.value === currentStatus}
+            onClick={() => update(option.value)}
+            className={`h-10 rounded-md border px-3 text-sm font-medium transition disabled:cursor-not-allowed ${
+              option.value === currentStatus
+                ? "border-brand bg-brand text-surface"
+                : "border-stroke bg-surface text-muted hover:border-brand hover:text-text disabled:opacity-60"
+            }`}
+          >
+            {loadingStatus === option.value ? "Смена..." : option.label}
+          </button>
+        ))}
+      </div>
+      {error && <div className="text-sm text-danger">{error}</div>}
+    </div>
   );
 }
 
@@ -318,11 +354,7 @@ function Select({
   return (
     <label className="block">
       <span className="mb-2 block text-sm text-muted">{label}</span>
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="h-10 w-full rounded-md border border-stroke bg-surface px-3 text-sm outline-none transition focus:border-brand"
-      >
+      <select value={value} onChange={(event) => onChange(event.target.value)} className="h-10 w-full rounded-md border border-stroke bg-surface px-3 text-sm outline-none transition focus:border-brand">
         {placeholder && <option value="">{placeholder}</option>}
         {options.map((option) => {
           const optionValue = option.value ?? option.id ?? "";
@@ -333,6 +365,15 @@ function Select({
           );
         })}
       </select>
+    </label>
+  );
+}
+
+function DateField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return (
+    <label className="block">
+      <span className="mb-2 block text-sm text-muted">{label}</span>
+      <input value={value} onChange={(event) => onChange(event.target.value)} className="h-10 w-full rounded-md border border-stroke bg-surface px-3 text-sm outline-none transition focus:border-brand" type="datetime-local" />
     </label>
   );
 }
@@ -380,12 +421,7 @@ export function ChecklistForm({ taskId }: { taskId: string }) {
         className="h-10 min-w-0 flex-1 rounded-md border border-stroke bg-surface px-3 text-sm outline-none transition focus:border-brand"
         placeholder="Новый пункт чеклиста"
       />
-      <button
-        type="submit"
-        disabled={!title.trim() || loading}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-brand text-surface transition hover:bg-emerald-300 disabled:opacity-60"
-        aria-label="Добавить пункт"
-      >
+      <button type="submit" disabled={!title.trim() || loading} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-brand text-surface transition hover:bg-emerald-300 disabled:opacity-60" aria-label="Добавить пункт">
         <Plus size={18} />
       </button>
     </form>
@@ -412,13 +448,5 @@ export function ChecklistToggle({ taskId, itemId, done }: { taskId: string; item
     }
   }
 
-  return (
-    <input
-      type="checkbox"
-      checked={done}
-      disabled={loading}
-      onChange={(event) => toggle(event.target.checked)}
-      className="h-4 w-4 accent-emerald-400"
-    />
-  );
+  return <input type="checkbox" checked={done} disabled={loading} onChange={(event) => toggle(event.target.checked)} className="h-4 w-4 accent-emerald-400" />;
 }

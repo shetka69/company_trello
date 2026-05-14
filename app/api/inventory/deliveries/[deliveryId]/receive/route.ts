@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { createLowStockNotification, resolveLowStockNotification } from "@/lib/notifications";
-import { hasPermission } from "@/lib/permissions";
+import { hasUserPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
@@ -13,7 +13,7 @@ const schema = z.object({
 
 export async function POST(request: Request, context: { params: Promise<{ deliveryId: string }> }) {
   const user = await requireUser();
-  if (!hasPermission(user.role.code, "inventory:manage")) {
+  if (!hasUserPermission(user, "inventory:manage")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

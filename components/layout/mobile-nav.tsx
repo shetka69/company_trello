@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Bell, Boxes, CalendarDays, LayoutDashboard, ListTodo, Milestone } from "lucide-react";
 import type { CurrentUser } from "@/lib/auth";
-import { hasPermission } from "@/lib/permissions";
+import { hasUserPermission } from "@/lib/permissions";
 
 const nav = [
   { href: "/app", label: "Панель", icon: LayoutDashboard, permission: "dashboard:read" as const },
@@ -13,7 +13,7 @@ const nav = [
 ];
 
 export function MobileNav({ user }: { user: CurrentUser }) {
-  const visible = nav.filter((item) => hasPermission(user.role.code, item.permission));
+  const visible = nav.filter((item) => item.href === "/app/calendar" || hasUserPermission(user, item.permission));
 
   return (
     <nav

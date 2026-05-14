@@ -1,32 +1,35 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { inventoryScopeFor, taskScopeFor } from "@/lib/data-scope";
-import { hasPermission } from "@/lib/permissions";
+import { hasUserPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(request: Request) {
   const user = await requireUser();
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q")?.trim() ?? "";
+  const scope = searchParams.get("scope");
 
   if (query.length < 2) {
     return NextResponse.json({ results: [] });
   }
 
   const contains = { contains: query, mode: "insensitive" as const };
+  const includeTasks = !scope || scope === "tasks";
+  const includeAll = !scope;
+
   const [tasks, items, users, projects] = await Promise.all([
-    hasPermission(user.role.code, "tasks:read")
+    includeTasks && hasUserPermission(user, "tasks:read")
       ? prisma.task.findMany({
           where: {
-            ...taskScopeFor(user),
-            OR: [{ title: contains }, { description: contains }]
+            AND: [taskScopeFor(user), { OR: [{ title: contains }, { description: contains }] }]
           },
           select: { id: true, title: true, status: true },
-          take: 5,
+          take: 6,
           orderBy: { updatedAt: "desc" }
         })
       : [],
-    hasPermission(user.role.code, "inventory:read")
+    includeAll && hasUserPermission(user, "inventory:read")
       ? prisma.inventoryItem.findMany({
           where: {
             ...inventoryScopeFor(user),
@@ -37,7 +40,7 @@ export async function GET(request: Request) {
           orderBy: { updatedAt: "desc" }
         })
       : [],
-    hasPermission(user.role.code, "users:manage")
+    includeAll && hasUserPermission(user, "users:manage")
       ? prisma.user.findMany({
           where: {
             companyId: user.companyId,
@@ -48,20 +51,23 @@ export async function GET(request: Request) {
           orderBy: { name: "asc" }
         })
       : [],
-    prisma.project.findMany({
-      where: {
-        companyId: user.companyId,
-        OR: [{ name: contains }, { description: contains }]
-      },
-      select: { id: true, name: true, description: true },
-      take: 5,
-      orderBy: { updatedAt: "desc" }
-    })
+    includeAll
+      ? prisma.project.findMany({
+          where: {
+            companyId: user.companyId,
+            OR: [{ name: contains }, { description: contains }]
+          },
+          select: { id: true, name: true, description: true },
+          take: 5,
+          orderBy: { updatedAt: "desc" }
+        })
+      : []
   ]);
 
   const results = [
     ...tasks.map((task) => ({
       id: `task-${task.id}`,
+      kind: "task",
       type: "Задача",
       title: task.title,
       subtitle: task.status,
@@ -69,6 +75,7 @@ export async function GET(request: Request) {
     })),
     ...items.map((item) => ({
       id: `inventory-${item.id}`,
+      kind: "inventory",
       type: "Склад",
       title: item.name,
       subtitle: `${item.category} · ${item.quantity} ${item.unit}`,
@@ -76,6 +83,7 @@ export async function GET(request: Request) {
     })),
     ...users.map((employee) => ({
       id: `user-${employee.id}`,
+      kind: "user",
       type: "Сотрудник",
       title: employee.name,
       subtitle: employee.email,
@@ -83,6 +91,7 @@ export async function GET(request: Request) {
     })),
     ...projects.map((project) => ({
       id: `project-${project.id}`,
+      kind: "project",
       type: "Проект",
       title: project.name,
       subtitle: project.description ?? "Проект",

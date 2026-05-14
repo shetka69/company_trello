@@ -3,7 +3,7 @@ import { Priority, TaskStatus, TaskType } from "@prisma/client";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { taskScopeFor } from "@/lib/data-scope";
-import { canSeeAllCompanyData, hasPermission } from "@/lib/permissions";
+import { canSeeAllCompanyData, hasUserPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
 const updateSchema = z.object({
@@ -20,7 +20,7 @@ const updateSchema = z.object({
 
 export async function PATCH(request: Request, context: { params: Promise<{ taskId: string }> }) {
   const user = await requireUser();
-  if (!hasPermission(user.role.code, "tasks:manage")) {
+  if (!hasUserPermission(user, "tasks:manage")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -41,7 +41,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ taskI
   const companyWide = canSeeAllCompanyData(user.role.code);
   const departmentId = parsed.data.departmentId === undefined ? task.departmentId : parsed.data.departmentId;
 
-  if (!companyWide && departmentId !== user.departmentId) {
+  if (!companyWide && user.role.code !== "FOREMAN" && departmentId !== user.departmentId) {
     return NextResponse.json({ error: "Forbidden department" }, { status: 403 });
   }
 
@@ -62,7 +62,11 @@ export async function PATCH(request: Request, context: { params: Promise<{ taskI
         id: parsed.data.assigneeId,
         companyId: user.companyId,
         isActive: true,
-        ...(companyWide ? {} : { departmentId: user.departmentId })
+        ...(user.role.code === "FOREMAN"
+          ? { role: { code: { notIn: ["DEVELOPER", "MANAGER"] } } }
+          : companyWide
+            ? {}
+            : { departmentId: user.departmentId })
       },
       select: { id: true }
     });
@@ -155,7 +159,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ taskI
 
 export async function DELETE(_request: Request, context: { params: Promise<{ taskId: string }> }) {
   const user = await requireUser();
-  if (!hasPermission(user.role.code, "tasks:manage")) {
+  if (!hasUserPermission(user, "tasks:manage")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
