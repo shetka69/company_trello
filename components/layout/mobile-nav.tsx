@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bell, Boxes, CalendarDays, LayoutDashboard, ListTodo } from "lucide-react";
+import { Bell, Boxes, CalendarDays, LayoutDashboard, ListTodo, Milestone } from "lucide-react";
 import type { CurrentUser } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 
@@ -8,14 +8,18 @@ const nav = [
   { href: "/app/tasks", label: "Задачи", icon: ListTodo, permission: "tasks:read" as const },
   { href: "/app/calendar", label: "Календарь", icon: CalendarDays, permission: "calendar:read" as const },
   { href: "/app/inventory", label: "Склад", icon: Boxes, permission: "inventory:read" as const },
-  { href: "/app/notifications", label: "Уведомления", icon: Bell, permission: "notifications:read" as const }
+  { href: "/app/notifications", label: "Уведомл.", icon: Bell, permission: "notifications:read" as const },
+  { href: "/app/roadmap", label: "План", icon: Milestone, permission: "roadmap:read" as const }
 ];
 
 export function MobileNav({ user }: { user: CurrentUser }) {
   const visible = nav.filter((item) => hasPermission(user.role.code, item.permission));
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t border-stroke bg-surface/95 px-1 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 backdrop-blur lg:hidden">
+    <nav
+      className="fixed inset-x-0 bottom-0 z-20 grid border-t border-stroke bg-surface/95 px-1 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 backdrop-blur lg:hidden"
+      style={{ gridTemplateColumns: `repeat(${visible.length}, minmax(0, 1fr))` }}
+    >
       {visible.map((item) => {
         const Icon = item.icon;
         return (

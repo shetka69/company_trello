@@ -8,6 +8,7 @@ export function cn(...inputs: ClassValue[]) {
 export function formatDate(date?: Date | string | null) {
   if (!date) return "Без срока";
   return new Intl.DateTimeFormat("ru-RU", {
+    timeZone: "Asia/Irkutsk",
     day: "2-digit",
     month: "short",
     hour: "2-digit",

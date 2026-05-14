@@ -9,11 +9,13 @@ export type Permission =
   | "inventory:read"
   | "inventory:manage"
   | "notifications:read"
+  | "roadmap:read"
   | "users:manage"
   | "audit:read"
   | "system:develop";
 
 export const permissionLabels: Record<Permission, string> = {
+  "roadmap:read": "План развития",
   "dashboard:read": "Главная панель",
   "tasks:read": "Просмотр задач",
   "tasks:manage": "Управление задачами",
@@ -46,7 +48,8 @@ export const permissionsByRole: Record<RoleCode, Permission[]> = {
     "calendar:manage",
     "inventory:read",
     "inventory:manage",
-    "notifications:read"
+    "notifications:read",
+    "roadmap:read"
   ],
   DEVELOPER: [
     "dashboard:read",
@@ -57,6 +60,7 @@ export const permissionsByRole: Record<RoleCode, Permission[]> = {
     "inventory:read",
     "inventory:manage",
     "notifications:read",
+    "roadmap:read",
     "users:manage",
     "audit:read",
     "system:develop"
