@@ -13,7 +13,7 @@ import {
   InventoryItemEditForm,
   InventoryTransactionForm
 } from "@/components/inventory/inventory-forms";
-import { requireUser } from "@/lib/auth";
+import { requirePermission, requireUser } from "@/lib/auth";
 import { inventoryScopeFor } from "@/lib/data-scope";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -43,6 +43,7 @@ type SearchParams = {
 
 export default async function InventoryPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
   const user = await requireUser();
+  requirePermission(user.role.code, "inventory:read");
   const params = (await searchParams) ?? {};
   const canManageInventory = hasPermission(user.role.code, "inventory:manage");
   const itemScope = inventoryScopeFor(user);

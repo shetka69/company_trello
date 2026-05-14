@@ -6,7 +6,7 @@ import { TaskCreateForm } from "@/components/tasks/task-create-form";
 import { TaskFilters } from "@/components/tasks/task-filters";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { requireUser } from "@/lib/auth";
+import { requirePermission, requireUser } from "@/lib/auth";
 import { taskScopeFor } from "@/lib/data-scope";
 import { canSeeAllCompanyData, hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -32,6 +32,7 @@ type SearchParams = {
 
 export default async function TasksPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
   const user = await requireUser();
+  requirePermission(user.role.code, "tasks:read");
   const params = (await searchParams) ?? {};
   const canManageTasks = hasPermission(user.role.code, "tasks:manage");
   const companyWide = canSeeAllCompanyData(user.role.code);

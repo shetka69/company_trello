@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { DepartmentCreateForm, DepartmentEditForm, UserCreateForm, UserEditForm } from "@/components/settings/settings-forms";
 import { requirePermission, requireUser } from "@/lib/auth";
-import { permissionsByRole, roleLabels } from "@/lib/permissions";
+import { permissionLabels, permissionsByRole, roleLabels } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
 export default async function SettingsPage() {
@@ -94,7 +94,7 @@ export default async function SettingsPage() {
                 <div className="mb-3 font-medium">{roleLabels[role as keyof typeof roleLabels]}</div>
                 <div className="flex flex-wrap gap-2">
                   {permissions.map((permission) => (
-                    <Badge key={permission}>{permission}</Badge>
+                    <Badge key={permission}>{permissionLabels[permission]}</Badge>
                   ))}
                 </div>
               </div>

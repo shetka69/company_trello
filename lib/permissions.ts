@@ -13,6 +13,20 @@ export type Permission =
   | "audit:read"
   | "system:develop";
 
+export const permissionLabels: Record<Permission, string> = {
+  "dashboard:read": "Главная панель",
+  "tasks:read": "Просмотр задач",
+  "tasks:manage": "Управление задачами",
+  "calendar:read": "Просмотр календаря",
+  "calendar:manage": "Управление календарем",
+  "inventory:read": "Просмотр склада",
+  "inventory:manage": "Управление складом",
+  "notifications:read": "Уведомления",
+  "users:manage": "Пользователи и отделы",
+  "audit:read": "Журнал действий",
+  "system:develop": "Технический доступ"
+};
+
 export const roleLabels: Record<RoleCode, string> = {
   DEVELOPER: "Разработчик",
   MANAGER: "Руководитель",
@@ -41,8 +55,11 @@ export const permissionsByRole: Record<RoleCode, Permission[]> = {
     "tasks:read",
     "tasks:manage",
     "calendar:read",
+    "calendar:manage",
     "inventory:read",
+    "inventory:manage",
     "notifications:read",
+    "users:manage",
     "audit:read",
     "system:develop"
   ],

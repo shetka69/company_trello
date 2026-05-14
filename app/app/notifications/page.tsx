@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { NotificationReadAllButton, NotificationReadButton } from "@/components/notifications/notification-actions";
-import { requireUser } from "@/lib/auth";
+import { requirePermission, requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/utils";
 
@@ -45,6 +45,7 @@ export default async function NotificationsPage({
   searchParams?: Promise<{ filter?: string }>;
 }) {
   const user = await requireUser();
+  requirePermission(user.role.code, "notifications:read");
   const params = await searchParams;
   const filter = params?.filter === "all" ? "all" : "unread";
   const baseWhere = {

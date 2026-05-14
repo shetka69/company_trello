@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { ChecklistForm, ChecklistToggle, CommentForm, TaskDeleteButton, TaskEditForm } from "@/components/tasks/task-detail-actions";
-import { requireUser } from "@/lib/auth";
+import { requirePermission, requireUser } from "@/lib/auth";
 import { taskScopeFor } from "@/lib/data-scope";
 import { canSeeAllCompanyData, hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -34,6 +34,7 @@ function priorityVariant(priority: keyof typeof priorityLabels) {
 
 export default async function TaskDetailsPage({ params }: { params: Promise<{ taskId: string }> }) {
   const user = await requireUser();
+  requirePermission(user.role.code, "tasks:read");
   const { taskId } = await params;
   const canManageTasks = hasPermission(user.role.code, "tasks:manage");
   const companyWide = canSeeAllCompanyData(user.role.code);

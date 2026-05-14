@@ -3,7 +3,7 @@ import type { CalendarEventType } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { CalendarEventCreateForm, CalendarEventEditForm } from "@/components/calendar/calendar-forms";
-import { requireUser } from "@/lib/auth";
+import { requirePermission, requireUser } from "@/lib/auth";
 import { taskScopeFor } from "@/lib/data-scope";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -35,6 +35,7 @@ export default async function CalendarPage({
   searchParams?: Promise<{ mode?: string; date?: string; types?: string }>;
 }) {
   const user = await requireUser();
+  requirePermission(user.role.code, "calendar:read");
   const params = await searchParams;
   const mode = parseMode(params?.mode);
   const anchor = parseAnchorDate(params?.date);
