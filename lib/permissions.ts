@@ -46,9 +46,7 @@ export const permissionsByRole: Record<RoleCode, Permission[]> = {
     "calendar:manage",
     "inventory:read",
     "inventory:manage",
-    "notifications:read",
-    "users:manage",
-    "audit:read"
+    "notifications:read"
   ],
   DEVELOPER: [
     "dashboard:read",

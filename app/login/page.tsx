@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("leader@demo.local");
-  const [password, setPassword] = useState("demo12345");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -66,9 +66,6 @@ export default function LoginPage() {
             {loading ? "Вход..." : "Войти"}
           </Button>
         </form>
-        <div className="mt-5 rounded-md border border-stroke bg-surface p-3 text-xs leading-5 text-muted">
-          Demo: `leader@demo.local` / `demo12345`
-        </div>
       </section>
     </main>
   );

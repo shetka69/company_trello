@@ -45,3 +45,26 @@ export async function PATCH(request: Request) {
 
   return NextResponse.json({ ok: true });
 }
+
+export async function DELETE(request: Request) {
+  const user = await requireUser();
+  if (!hasPermission(user.role.code, "notifications:read")) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const parsed = schema.pick({ notificationId: true }).safeParse(await request.json());
+  if (!parsed.success || !parsed.data.notificationId) {
+    return NextResponse.json({ error: "notificationId is required" }, { status: 400 });
+  }
+
+  await prisma.notification.deleteMany({
+    where: {
+      id: parsed.data.notificationId,
+      companyId: user.companyId,
+      OR: [{ userId: user.id }, { userId: null }],
+      readAt: { not: null }
+    }
+  });
+
+  return NextResponse.json({ ok: true });
+}

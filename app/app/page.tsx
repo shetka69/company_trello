@@ -15,7 +15,7 @@ export default async function DashboardPage() {
   const canReadAudit = hasPermission(user.role.code, "audit:read");
   const canReadCalendar = hasPermission(user.role.code, "calendar:read");
 
-  const [todayTasks, overdueTasks, events, criticalNotifications, lowStock, logs] = await Promise.all([
+  const [todayTasks, overdueTasks, events, deadlineTasks, deliveries, criticalNotifications, lowStock, logs] = await Promise.all([
     prisma.task.findMany({
       where: { ...taskScopeFor(user), dueAt: { gte: now, lte: tomorrow } },
       include: { assignee: true },
@@ -30,9 +30,24 @@ export default async function DashboardPage() {
     }),
     canReadCalendar
       ? prisma.calendarEvent.findMany({
-          where: { companyId: user.companyId, startsAt: { gte: now } },
+          where: { companyId: user.companyId, startsAt: { gte: now }, type: { in: ["EVENT", "REMINDER"] } },
           take: 5,
           orderBy: { startsAt: "asc" }
+        })
+      : [],
+    canReadCalendar
+      ? prisma.task.findMany({
+          where: { ...taskScopeFor(user), dueAt: { gte: now } },
+          select: { id: true, title: true, dueAt: true },
+          take: 5,
+          orderBy: { dueAt: "asc" }
+        })
+      : [],
+    canReadCalendar && canReadInventory
+      ? prisma.delivery.findMany({
+          where: { companyId: user.companyId, expectedAt: { gte: now } },
+          take: 5,
+          orderBy: { expectedAt: "asc" }
         })
       : [],
     prisma.notification.findMany({
@@ -58,6 +73,13 @@ export default async function DashboardPage() {
   ]);
 
   const filteredLowStock = lowStock.filter((item) => item.quantity <= item.minThreshold);
+  const upcomingCalendarItems = [
+    ...events.map((event) => ({ date: event.startsAt, title: event.title, meta: formatDate(event.startsAt) })),
+    ...deadlineTasks.map((task) => ({ date: task.dueAt ?? now, title: task.title, meta: `Дедлайн задачи · ${formatDate(task.dueAt)}` })),
+    ...deliveries.map((delivery) => ({ date: delivery.expectedAt ?? now, title: delivery.title, meta: `Поставка · ${formatDate(delivery.expectedAt)}` }))
+  ]
+    .sort((left, right) => left.date.getTime() - right.date.getTime())
+    .slice(0, 5);
 
   return (
     <div className="space-y-6">
@@ -85,7 +107,7 @@ export default async function DashboardPage() {
         {canReadCalendar && (
           <Card>
             <SectionTitle title="Календарь" />
-            <List items={events.map((event) => ({ title: event.title, meta: formatDate(event.startsAt) }))} />
+            <List items={upcomingCalendarItems.map((event) => ({ title: event.title, meta: event.meta }))} />
           </Card>
         )}
         {canReadInventory && (

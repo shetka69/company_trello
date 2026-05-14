@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, CheckCheck } from "lucide-react";
+import { Check, CheckCheck, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -68,6 +68,41 @@ export function NotificationReadAllButton({ disabled }: { disabled: boolean }) {
     >
       <CheckCheck size={18} />
       {loading ? "Обновление..." : "Прочитать все"}
+    </button>
+  );
+}
+
+export function NotificationDeleteButton({ notificationId }: { notificationId: string }) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
+  async function removeNotification() {
+    if (loading) return;
+    setLoading(true);
+
+    const response = await fetch("/api/notifications/read", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ notificationId })
+    });
+
+    setLoading(false);
+
+    if (response.ok) {
+      router.refresh();
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={removeNotification}
+      disabled={loading}
+      aria-label="Удалить уведомление"
+      title="Удалить уведомление"
+      className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-stroke text-muted transition hover:border-rose-300/40 hover:text-rose-100 disabled:opacity-60"
+    >
+      <X size={16} />
     </button>
   );
 }

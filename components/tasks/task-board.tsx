@@ -54,11 +54,13 @@ function DraggableCard({ task }: { task: BoardTask }) {
       style={style}
       {...listeners}
       {...attributes}
-      className={`cursor-grab rounded-lg border border-stroke bg-surface p-4 shadow-sm transition ${isDragging ? "opacity-60" : ""}`}
+      className={`min-w-0 cursor-grab rounded-lg border border-stroke bg-surface p-4 shadow-sm transition ${isDragging ? "opacity-60" : ""}`}
     >
-      <div className="mb-3 flex items-start justify-between gap-2">
-        <h3 className="text-sm font-semibold leading-5">{task.title}</h3>
-        <Badge variant={priorityVariant(task.priority)}>{priorityLabels[task.priority]}</Badge>
+      <div className="mb-3 flex min-w-0 items-start justify-between gap-2">
+        <h3 className="min-w-0 text-sm font-semibold leading-5 [overflow-wrap:anywhere]">{task.title}</h3>
+        <span className="shrink-0">
+          <Badge variant={priorityVariant(task.priority)}>{priorityLabels[task.priority]}</Badge>
+        </span>
       </div>
       {task.description && <p className="line-clamp-2 text-sm leading-5 text-muted">{task.description}</p>}
       <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted">

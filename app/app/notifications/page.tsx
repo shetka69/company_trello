@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { NotificationReadAllButton, NotificationReadButton } from "@/components/notifications/notification-actions";
+import { NotificationDeleteButton, NotificationReadAllButton, NotificationReadButton } from "@/components/notifications/notification-actions";
 import { requirePermission, requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/utils";
@@ -121,6 +121,7 @@ export default async function NotificationsPage({
                       </Link>
                     )}
                     {!notification.readAt && <NotificationReadButton notificationId={notification.id} />}
+                    {notification.readAt && <NotificationDeleteButton notificationId={notification.id} />}
                   </div>
                 </div>
               </div>
