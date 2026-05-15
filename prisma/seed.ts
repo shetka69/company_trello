@@ -10,7 +10,7 @@ async function main() {
 
   const company = await prisma.company.upsert({
     where: { slug: "demo" },
-    update: {},
+    update: { name: "Азия Мьюзик" },
     create: { name: "Азия Мьюзик", slug: "demo" }
   });
 
