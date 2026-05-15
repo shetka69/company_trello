@@ -1,17 +1,16 @@
-import Link from "next/link";
-import { Bell, Boxes, CalendarDays, LayoutDashboard, ListTodo, Milestone, QrCode, Settings } from "lucide-react";
+import { SidebarNavItem, type NavIconName } from "@/components/layout/nav-item-link";
 import type { CurrentUser } from "@/lib/auth";
-import { hasUserPermission } from "@/lib/permissions";
+import { hasUserPermission, type Permission } from "@/lib/permissions";
 
-const nav = [
-  { href: "/app", label: "Панель", icon: LayoutDashboard, permission: "dashboard:read" as const },
-  { href: "/app/tasks", label: "Задачи", icon: ListTodo, permission: "tasks:read" as const },
-  { href: "/app/calendar", label: "Календарь", icon: CalendarDays, permission: "calendar:read" as const },
-  { href: "/app/inventory", label: "Склад", icon: Boxes, permission: "inventory:read" as const },
-  { href: "/app/qr", label: "QR-коды", icon: QrCode, permission: "qr:read" as const },
-  { href: "/app/notifications", label: "Уведомления", icon: Bell, permission: "notifications:read" as const },
-  { href: "/app/roadmap", label: "План развития", icon: Milestone, permission: "roadmap:read" as const },
-  { href: "/app/settings", label: "Настройки", icon: Settings, permission: "users:manage" as const }
+const nav: { href: string; label: string; icon: NavIconName; permission: Permission }[] = [
+  { href: "/app", label: "Панель", icon: "dashboard", permission: "dashboard:read" },
+  { href: "/app/tasks", label: "Задачи", icon: "tasks", permission: "tasks:read" },
+  { href: "/app/calendar", label: "Календарь", icon: "calendar", permission: "calendar:read" },
+  { href: "/app/inventory", label: "Склад", icon: "inventory", permission: "inventory:read" },
+  { href: "/app/qr", label: "QR-коды", icon: "qr", permission: "qr:read" },
+  { href: "/app/notifications", label: "Уведомления", icon: "notifications", permission: "notifications:read" },
+  { href: "/app/roadmap", label: "План развития", icon: "roadmap", permission: "roadmap:read" },
+  { href: "/app/settings", label: "Настройки", icon: "settings", permission: "users:manage" }
 ];
 
 export function Sidebar({ user }: { user: CurrentUser }) {
@@ -24,19 +23,9 @@ export function Sidebar({ user }: { user: CurrentUser }) {
         <div className="mt-1 text-sm text-muted">{user.company.name}</div>
       </div>
       <nav className="space-y-1">
-        {visible.map((item) => {
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-muted transition hover:bg-panelSoft hover:text-text"
-            >
-              <Icon size={18} />
-              {item.label}
-            </Link>
-          );
-        })}
+        {visible.map((item) => (
+          <SidebarNavItem key={item.href} href={item.href} label={item.label} icon={item.icon} />
+        ))}
       </nav>
     </aside>
   );

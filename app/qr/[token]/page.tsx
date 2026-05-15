@@ -25,6 +25,7 @@ export default async function PublicQrPassportPage({ params }: { params: Promise
   const canSeeInternal = Boolean(user && user.companyId === code.companyId && hasUserPermission(user, "qr:read"));
   const canShip = Boolean(user && user.companyId === code.companyId && hasUserPermission(user, "qr:manage") && code.status !== "SHIPPED");
   const canDeleteQr = Boolean(user && user.companyId === code.companyId && (user.role.code === "DEVELOPER" || user.role.code === "MANAGER"));
+  const canSeePublicQrLink = Boolean(user && user.companyId === code.companyId && user.role.code === "DEVELOPER");
 
   return (
     <main className="min-h-screen bg-surface px-4 py-8 text-text sm:px-6 lg:px-8">
@@ -96,7 +97,7 @@ export default async function PublicQrPassportPage({ params }: { params: Promise
                     <Info label="Срок отправки" value={formatDate(code.shippingDueAt)} />
                     <Info label="Создал" value={code.createdBy.name} />
                     <Info label="Отправлено" value={code.shippedAt ? formatDate(code.shippedAt) : "Еще не отправлено"} />
-                    <Info label="Публичная ссылка" value={code.qrPayload} />
+                    {canSeePublicQrLink && <Info label="Публичная ссылка" value={code.qrPayload} />}
                   </div>
                   {canShip && (
                     <div className="mt-4 flex flex-wrap gap-2">
@@ -112,6 +113,7 @@ export default async function PublicQrPassportPage({ params }: { params: Promise
                 </div>
               )}
 
+              {!canSeeInternal && (
               <div className="rounded-lg border border-stroke bg-surface p-4">
                 <h2 className="font-semibold">Связаться с компанией</h2>
                 <p className="mt-2 text-sm leading-6 text-muted">
@@ -123,6 +125,7 @@ export default async function PublicQrPassportPage({ params }: { params: Promise
                   <span className="rounded-md bg-panel px-3 py-2">Проверка подлинности</span>
                 </div>
               </div>
+              )}
             </div>
           </div>
         </section>

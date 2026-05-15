@@ -98,10 +98,10 @@ export function QrScanner() {
             Сканер QR-кодов
           </div>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">
-            Наведите камеру на QR-код изделия. Система откроет цифровой паспорт, а доступные действия покажет по вашей роли.
+            На телефоне можно открыть камеру и отсканировать QR-код. На компьютере используйте ручной ввод ссылки, токена или номера изделия.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 md:hidden">
           {!scanning ? (
             <Button type="button" onClick={startScanner} className="gap-2">
               <Camera size={16} />
@@ -120,8 +120,8 @@ export function QrScanner() {
         </div>
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,360px)_1fr]">
-        <div className="overflow-hidden rounded-md border border-stroke bg-panel">
+      <div className="mt-4 grid gap-4 md:grid-cols-1 lg:grid-cols-[minmax(0,520px)]">
+        <div className="overflow-hidden rounded-md border border-stroke bg-panel md:hidden">
           <video ref={videoRef} className="aspect-[4/3] w-full bg-black object-cover" muted playsInline />
         </div>
 

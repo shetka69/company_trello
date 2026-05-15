@@ -21,6 +21,7 @@ export default async function QrCodesPage() {
   requirePermission(user, "qr:read");
   const canManageQr = hasUserPermission(user, "qr:manage");
   const canDeleteQr = user.role.code === "DEVELOPER" || user.role.code === "MANAGER";
+  const canSeePublicQrLink = user.role.code === "DEVELOPER";
 
   const [presets, codes] = await Promise.all([
     prisma.qrProductPreset.findMany({
@@ -94,11 +95,11 @@ export default async function QrCodesPage() {
                   <Info label="Куда едет" value={code.destination} />
                   <Info label="Срок отправки" value={formatDate(code.shippingDueAt)} />
                   <Info label="Создал" value={code.createdBy.name} />
-                  <Info label="Ссылка" value={code.qrPayload} />
+                  {canSeePublicQrLink && <Info label="Ссылка" value={code.qrPayload} />}
                 </dl>
 
                 <div className="flex flex-wrap gap-2">
-                  <PublicQrLink token={code.token} />
+                  {canSeePublicQrLink && <PublicQrLink token={code.token} />}
                   {canManageQr && code.status === "WAITING" && <QrWarehouseButton codeId={code.id} />}
                   {canManageQr && code.status !== "SHIPPED" && <QrShipButton codeId={code.id} />}
                   {canDeleteQr ? <QrDeleteButton codeId={code.id} /> : <QrDeleteRequestButton codeId={code.id} />}

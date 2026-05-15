@@ -1,16 +1,15 @@
-import Link from "next/link";
-import { Bell, Boxes, CalendarDays, LayoutDashboard, ListTodo, Milestone, QrCode } from "lucide-react";
+import { MobileNavItem, type NavIconName } from "@/components/layout/nav-item-link";
 import type { CurrentUser } from "@/lib/auth";
-import { hasUserPermission } from "@/lib/permissions";
+import { hasUserPermission, type Permission } from "@/lib/permissions";
 
-const nav = [
-  { href: "/app", label: "Панель", icon: LayoutDashboard, permission: "dashboard:read" as const },
-  { href: "/app/tasks", label: "Задачи", icon: ListTodo, permission: "tasks:read" as const },
-  { href: "/app/calendar", label: "Календарь", icon: CalendarDays, permission: "calendar:read" as const },
-  { href: "/app/inventory", label: "Склад", icon: Boxes, permission: "inventory:read" as const },
-  { href: "/app/qr", label: "QR", icon: QrCode, permission: "qr:read" as const },
-  { href: "/app/notifications", label: "Увед.", icon: Bell, permission: "notifications:read" as const },
-  { href: "/app/roadmap", label: "План", icon: Milestone, permission: "roadmap:read" as const }
+const nav: { href: string; label: string; icon: NavIconName; permission: Permission }[] = [
+  { href: "/app", label: "Панель", icon: "dashboard", permission: "dashboard:read" },
+  { href: "/app/tasks", label: "Задачи", icon: "tasks", permission: "tasks:read" },
+  { href: "/app/calendar", label: "Календарь", icon: "calendar", permission: "calendar:read" },
+  { href: "/app/inventory", label: "Склад", icon: "inventory", permission: "inventory:read" },
+  { href: "/app/qr", label: "QR", icon: "qr", permission: "qr:read" },
+  { href: "/app/notifications", label: "Увед.", icon: "notifications", permission: "notifications:read" },
+  { href: "/app/roadmap", label: "План", icon: "roadmap", permission: "roadmap:read" }
 ];
 
 export function MobileNav({ user }: { user: CurrentUser }) {
@@ -21,15 +20,9 @@ export function MobileNav({ user }: { user: CurrentUser }) {
       className="fixed inset-x-0 bottom-0 z-20 grid border-t border-stroke bg-surface/95 px-1 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 backdrop-blur lg:hidden"
       style={{ gridTemplateColumns: `repeat(${visible.length}, minmax(0, 1fr))` }}
     >
-      {visible.map((item) => {
-        const Icon = item.icon;
-        return (
-          <Link key={item.href} href={item.href} className="flex min-w-0 flex-col items-center gap-1 rounded-md px-1 py-2 text-[10px] text-muted min-[390px]:text-[11px]">
-            <Icon size={18} />
-            <span className="max-w-full truncate">{item.label}</span>
-          </Link>
-        );
-      })}
+      {visible.map((item) => (
+        <MobileNavItem key={item.href} href={item.href} label={item.label} icon={item.icon} />
+      ))}
     </nav>
   );
 }

@@ -11,7 +11,7 @@ async function main() {
   const company = await prisma.company.upsert({
     where: { slug: "demo" },
     update: {},
-    create: { name: "В разработке.....", slug: "demo" }
+    create: { name: "Азия Мьюзик", slug: "demo" }
   });
 
   const roleData = [
