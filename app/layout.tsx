@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Акустический отдел",
-  description: "Корпоративная система задач, календаря, склада и уведомлений",
+  title: "Asia Music Workspace",
+  description: "Корпоративная система задач, календаря, склада, уведомлений и дальнейшего развития через QR-инструменты.",
   manifest: "/manifest.json"
 };
 
