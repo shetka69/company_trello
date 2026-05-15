@@ -217,6 +217,49 @@ export function UserEditForm({ employee, roles, departments }: { employee: Emplo
   );
 }
 
+export function UserDeleteButton({ employee }: { employee: Pick<Employee, "id" | "name" | "isActive"> }) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function remove() {
+    if (loading) return;
+    const confirmed = window.confirm(`Удалить сотрудника "${employee.name}"? Аккаунт будет отключен, а история задач сохранится.`);
+    if (!confirmed) return;
+
+    setLoading(true);
+    setError("");
+
+    const response = await fetch(`/api/settings/users/${employee.id}`, {
+      method: "DELETE"
+    });
+
+    setLoading(false);
+
+    if (!response.ok) {
+      setError("Не удалось удалить сотрудника.");
+      return;
+    }
+
+    router.refresh();
+  }
+
+  return (
+    <div className="mt-3">
+      <button
+        type="button"
+        onClick={remove}
+        disabled={loading || !employee.isActive}
+        className="inline-flex h-9 items-center gap-2 rounded-md border border-rose-300/25 px-3 text-sm font-medium text-rose-100 transition hover:bg-rose-300/10 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <Trash2 size={16} />
+        {loading ? "Удаление..." : employee.isActive ? "Удалить сотрудника" : "Сотрудник отключен"}
+      </button>
+      {error && <div className="mt-2 text-sm text-danger">{error}</div>}
+    </div>
+  );
+}
+
 export function DepartmentCreateForm() {
   const router = useRouter();
   const [name, setName] = useState("");

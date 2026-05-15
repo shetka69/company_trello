@@ -99,3 +99,43 @@ export async function PATCH(request: Request, context: { params: Promise<{ userI
     return NextResponse.json({ error: "Email already exists" }, { status: 409 });
   }
 }
+
+export async function DELETE(_request: Request, context: { params: Promise<{ userId: string }> }) {
+  const user = await requireUser();
+  if (!hasUserPermission(user, "users:manage")) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const { userId } = await context.params;
+  const employee = await prisma.user.findFirst({
+    where: { id: userId, companyId: user.companyId },
+    select: { id: true, email: true, isActive: true }
+  });
+
+  if (!employee) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  if (employee.id === user.id) {
+    return NextResponse.json({ error: "Cannot delete yourself" }, { status: 400 });
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: employee.id },
+    data: { isActive: false },
+    select: { id: true, email: true, isActive: true }
+  });
+
+  await prisma.activityLog.create({
+    data: {
+      companyId: user.companyId,
+      actorId: user.id,
+      action: "user_deleted",
+      entity: "user",
+      entityId: employee.id,
+      meta: { email: employee.email, mode: "soft_delete" }
+    }
+  });
+
+  return NextResponse.json({ user: updated });
+}

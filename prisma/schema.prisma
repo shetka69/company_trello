@@ -67,6 +67,12 @@ enum CalendarEventType {
   REMINDER
 }
 
+enum QrShipmentStatus {
+  WAITING
+  WAREHOUSE
+  SHIPPED
+}
+
 model Company {
   id          String   @id @default(cuid())
   name        String
@@ -84,6 +90,8 @@ model Company {
   logs        ActivityLog[]
   notifications Notification[]
   userPermissions UserPermission[]
+  qrProductPresets QrProductPreset[]
+  productQrCodes ProductQrCode[]
 }
 
 model Department {
@@ -138,6 +146,7 @@ model User {
   taskHistory    TaskHistory[]
   projectMemberships ProjectMember[]
   permissionOverrides UserPermission[]
+  createdQrCodes ProductQrCode[]
 
   @@index([companyId])
   @@index([roleId])
@@ -326,6 +335,44 @@ model Delivery {
   company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([companyId, expectedAt])
+}
+
+model QrProductPreset {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, name])
+  @@index([companyId])
+}
+
+model ProductQrCode {
+  id             String           @id @default(cuid())
+  companyId      String
+  createdById    String
+  token          String           @unique
+  productNumber  String
+  productName    String
+  manufacturedAt DateTime
+  recipient      String
+  destination    String
+  shippingDueAt  DateTime
+  status         QrShipmentStatus @default(WAITING)
+  qrPayload      String
+  qrSvg          String           @db.Text
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  shippedAt      DateTime?
+
+  company        Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy      User             @relation(fields: [createdById], references: [id])
+
+  @@index([companyId, status])
+  @@index([companyId, createdAt])
 }
 
 model Notification {

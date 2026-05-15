@@ -8,6 +8,8 @@ export type Permission =
   | "calendar:manage"
   | "inventory:read"
   | "inventory:manage"
+  | "qr:read"
+  | "qr:manage"
   | "notifications:read"
   | "roadmap:read"
   | "users:manage"
@@ -22,6 +24,8 @@ export const permissions: Permission[] = [
   "calendar:manage",
   "inventory:read",
   "inventory:manage",
+  "qr:read",
+  "qr:manage",
   "notifications:read",
   "roadmap:read",
   "users:manage",
@@ -30,7 +34,6 @@ export const permissions: Permission[] = [
 ];
 
 export const permissionLabels: Record<Permission, string> = {
-  "roadmap:read": "План развития",
   "dashboard:read": "Главная панель",
   "tasks:read": "Просмотр задач",
   "tasks:manage": "Управление задачами",
@@ -38,7 +41,10 @@ export const permissionLabels: Record<Permission, string> = {
   "calendar:manage": "Управление календарем",
   "inventory:read": "Просмотр склада",
   "inventory:manage": "Управление складом",
+  "qr:read": "QR-коды",
+  "qr:manage": "Управление QR",
   "notifications:read": "Уведомления",
+  "roadmap:read": "План развития",
   "users:manage": "Пользователи и отделы",
   "audit:read": "Журнал действий",
   "system:develop": "Технический доступ"
@@ -63,6 +69,8 @@ export const permissionsByRole: Record<RoleCode, Permission[]> = {
     "calendar:manage",
     "inventory:read",
     "inventory:manage",
+    "qr:read",
+    "qr:manage",
     "notifications:read",
     "roadmap:read"
   ],
@@ -74,6 +82,8 @@ export const permissionsByRole: Record<RoleCode, Permission[]> = {
     "calendar:manage",
     "inventory:read",
     "inventory:manage",
+    "qr:read",
+    "qr:manage",
     "notifications:read",
     "roadmap:read",
     "users:manage",
@@ -87,6 +97,7 @@ export const permissionsByRole: Record<RoleCode, Permission[]> = {
     "calendar:read",
     "calendar:manage",
     "inventory:read",
+    "qr:read",
     "notifications:read",
     "audit:read"
   ],
@@ -96,12 +107,14 @@ export const permissionsByRole: Record<RoleCode, Permission[]> = {
     "calendar:read",
     "inventory:read",
     "inventory:manage",
+    "qr:read",
+    "qr:manage",
     "notifications:read",
     "audit:read"
   ],
-  ENGINEER: ["dashboard:read", "tasks:read", "calendar:read", "inventory:read", "notifications:read"],
-  ASSEMBLER: ["dashboard:read", "tasks:read", "calendar:read", "inventory:read", "notifications:read"],
-  TECHNOLOGIST: ["dashboard:read", "tasks:read", "calendar:read", "inventory:read", "notifications:read", "audit:read"]
+  ENGINEER: ["dashboard:read", "tasks:read", "calendar:read", "inventory:read", "qr:read", "notifications:read"],
+  ASSEMBLER: ["dashboard:read", "tasks:read", "calendar:read", "inventory:read", "qr:read", "notifications:read"],
+  TECHNOLOGIST: ["dashboard:read", "tasks:read", "calendar:read", "inventory:read", "qr:read", "notifications:read", "audit:read"]
 };
 
 export function hasPermission(role: RoleCode, permission: Permission) {

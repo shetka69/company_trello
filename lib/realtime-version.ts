@@ -22,6 +22,8 @@ export async function getRealtimeVersion(user: CurrentUser) {
     inventoryItems,
     inventoryTransactions,
     deliveries,
+    qrPresets,
+    qrCodes,
     notifications,
     logs,
     counts
@@ -41,6 +43,8 @@ export async function getRealtimeVersion(user: CurrentUser) {
     prisma.inventoryItem.aggregate({ where: { companyId }, _max: { updatedAt: true } }),
     prisma.inventoryTransaction.aggregate({ where: { item: { companyId } }, _max: { createdAt: true } }),
     prisma.delivery.aggregate({ where: { companyId }, _max: { createdAt: true, receivedAt: true } }),
+    prisma.qrProductPreset.aggregate({ where: { companyId }, _max: { updatedAt: true } }),
+    prisma.productQrCode.aggregate({ where: { companyId }, _max: { updatedAt: true } }),
     prisma.notification.aggregate({
       where: { companyId, OR: [{ userId: user.id }, { userId: null }] },
       _max: { createdAt: true, readAt: true }
@@ -61,6 +65,8 @@ export async function getRealtimeVersion(user: CurrentUser) {
       prisma.taskComment.count({ where: { task: { companyId } } }),
       prisma.taskChecklistItem.count({ where: { task: { companyId } } }),
       prisma.inventoryTransaction.count({ where: { item: { companyId } } }),
+      prisma.qrProductPreset.count({ where: { companyId } }),
+      prisma.productQrCode.count({ where: { companyId } }),
       prisma.activityLog.count({ where: { companyId } })
     ])
   ]);
@@ -82,6 +88,8 @@ export async function getRealtimeVersion(user: CurrentUser) {
     timestamp(inventoryTransactions._max.createdAt),
     timestamp(deliveries._max.createdAt),
     timestamp(deliveries._max.receivedAt),
+    timestamp(qrPresets._max.updatedAt),
+    timestamp(qrCodes._max.updatedAt),
     timestamp(notifications._max.createdAt),
     timestamp(notifications._max.readAt),
     timestamp(logs._max.createdAt)

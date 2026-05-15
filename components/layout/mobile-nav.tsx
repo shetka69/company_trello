@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bell, Boxes, CalendarDays, LayoutDashboard, ListTodo, Milestone } from "lucide-react";
+import { Bell, Boxes, CalendarDays, LayoutDashboard, ListTodo, Milestone, QrCode } from "lucide-react";
 import type { CurrentUser } from "@/lib/auth";
 import { hasUserPermission } from "@/lib/permissions";
 
@@ -8,7 +8,8 @@ const nav = [
   { href: "/app/tasks", label: "Задачи", icon: ListTodo, permission: "tasks:read" as const },
   { href: "/app/calendar", label: "Календарь", icon: CalendarDays, permission: "calendar:read" as const },
   { href: "/app/inventory", label: "Склад", icon: Boxes, permission: "inventory:read" as const },
-  { href: "/app/notifications", label: "Уведомл.", icon: Bell, permission: "notifications:read" as const },
+  { href: "/app/qr", label: "QR", icon: QrCode, permission: "qr:read" as const },
+  { href: "/app/notifications", label: "Увед.", icon: Bell, permission: "notifications:read" as const },
   { href: "/app/roadmap", label: "План", icon: Milestone, permission: "roadmap:read" as const }
 ];
 

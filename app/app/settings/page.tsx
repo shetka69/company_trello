@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { DepartmentCreateForm, DepartmentEditForm, PermissionToggleGrid, UserCreateForm, UserEditForm } from "@/components/settings/settings-forms";
+import { DepartmentCreateForm, DepartmentEditForm, PermissionToggleGrid, UserCreateForm, UserDeleteButton, UserEditForm } from "@/components/settings/settings-forms";
 import { requirePermission, requireUser } from "@/lib/auth";
 import { hasUserPermission, permissionLabels, permissionsByRole, roleLabels } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -69,6 +69,7 @@ export default async function SettingsPage() {
                 roles={roles}
                 departments={departments}
               />
+              {employee.id !== user.id && <UserDeleteButton employee={{ id: employee.id, name: employee.name, isActive: employee.isActive }} />}
               {canDevelopSystem && (
                 <PermissionToggleGrid
                   employee={{
