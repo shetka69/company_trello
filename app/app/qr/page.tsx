@@ -1,6 +1,16 @@
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { ProductPresetForm, PublicQrLink, QrCodeCreateForm, QrShipButton, QrWarehouseButton, qrStatusLabels } from "@/components/qr/qr-forms";
+import {
+  ProductPresetForm,
+  PublicQrLink,
+  QrCodeCreateForm,
+  QrDeleteButton,
+  QrDeleteRequestButton,
+  QrShipButton,
+  QrWarehouseButton,
+  qrStatusLabels
+} from "@/components/qr/qr-forms";
+import { QrScanner } from "@/components/qr/qr-scanner";
 import { requirePermission, requireUser } from "@/lib/auth";
 import { hasUserPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -10,6 +20,7 @@ export default async function QrCodesPage() {
   const user = await requireUser();
   requirePermission(user, "qr:read");
   const canManageQr = hasUserPermission(user, "qr:manage");
+  const canDeleteQr = user.role.code === "DEVELOPER" || user.role.code === "MANAGER";
 
   const [presets, codes] = await Promise.all([
     prisma.qrProductPreset.findMany({
@@ -31,6 +42,8 @@ export default async function QrCodesPage() {
           <p className="mt-1 text-sm text-muted">Генерация, хранение и повторный просмотр QR-паспортов колонок</p>
         </div>
       </div>
+
+      <QrScanner />
 
       {canManageQr && (
         <div className="grid gap-4 lg:grid-cols-[420px_1fr]">
@@ -63,7 +76,7 @@ export default async function QrCodesPage() {
           {codes.map((code) => (
             <article key={code.id} className="grid gap-4 overflow-hidden rounded-md border border-stroke bg-surface p-4 md:grid-cols-[180px_minmax(0,1fr)]">
               <div
-                className="mx-auto aspect-square w-full max-w-[180px] rounded-md bg-white p-3 [&_svg]:h-full [&_svg]:w-full"
+                className="mx-auto aspect-[360/392] w-full max-w-[180px] rounded-md bg-white p-2 [&_svg]:h-full [&_svg]:w-full"
                 dangerouslySetInnerHTML={{ __html: code.qrSvg }}
               />
               <div className="min-w-0 space-y-3">
@@ -88,6 +101,7 @@ export default async function QrCodesPage() {
                   <PublicQrLink token={code.token} />
                   {canManageQr && code.status === "WAITING" && <QrWarehouseButton codeId={code.id} />}
                   {canManageQr && code.status !== "SHIPPED" && <QrShipButton codeId={code.id} />}
+                  {canDeleteQr ? <QrDeleteButton codeId={code.id} /> : <QrDeleteRequestButton codeId={code.id} />}
                 </div>
               </div>
             </article>

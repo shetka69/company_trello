@@ -26,17 +26,30 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
+  const productNumber = parsed.data.productNumber.trim();
+  const existing = await prisma.productQrCode.findFirst({
+    where: {
+      companyId: user.companyId,
+      productNumber
+    },
+    select: { id: true }
+  });
+
+  if (existing) {
+    return NextResponse.json({ error: "Product number already exists" }, { status: 409 });
+  }
+
   const token = randomBytes(18).toString("base64url");
   const origin = new URL(request.url).origin;
   const qrPayload = publicQrUrl(origin, token);
-  const qrSvg = await createQrSvg(qrPayload);
+  const qrSvg = await createQrSvg(qrPayload, productNumber);
 
   const code = await prisma.productQrCode.create({
     data: {
       companyId: user.companyId,
       createdById: user.id,
       token,
-      productNumber: parsed.data.productNumber.trim(),
+      productNumber,
       productName: parsed.data.productName.trim(),
       manufacturedAt: new Date(parsed.data.manufacturedAt),
       recipient: parsed.data.recipient.trim(),

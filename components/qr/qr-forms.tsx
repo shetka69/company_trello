@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Send } from "lucide-react";
+import { Send, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -103,7 +103,7 @@ export function QrCodeCreateForm({ presets }: { presets: Preset[] }) {
     setLoading(false);
 
     if (!response.ok) {
-      setError("Не удалось создать QR-код. Проверьте поля и права доступа.");
+      setError(response.status === 409 ? "QR-код с таким номером изделия уже существует." : "Не удалось создать QR-код. Проверьте поля и права доступа.");
       return;
     }
 
@@ -217,6 +217,91 @@ export function PublicQrLink({ token }: { token: string }) {
     <Link href={`/qr/${token}`} className="inline-flex h-9 items-center gap-2 rounded-md border border-stroke px-3 text-sm font-medium text-muted transition hover:text-text">
       Открыть паспорт
     </Link>
+  );
+}
+
+export function QrDeleteButton({ codeId }: { codeId: string }) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function remove() {
+    if (loading) return;
+    const confirmed = window.confirm("Удалить QR-код? Паспорт изделия перестанет открываться по этому коду.");
+    if (!confirmed) return;
+
+    setLoading(true);
+    setError("");
+
+    const response = await fetch(`/api/qr/codes/${codeId}`, {
+      method: "DELETE"
+    });
+
+    setLoading(false);
+
+    if (!response.ok) {
+      setError("Не удалось удалить QR-код.");
+      return;
+    }
+
+    router.push("/app/qr");
+    router.refresh();
+  }
+
+  return (
+    <div className="space-y-2">
+      <button
+        type="button"
+        onClick={remove}
+        disabled={loading}
+        className="inline-flex h-10 items-center gap-2 rounded-md border border-rose-300/30 px-4 text-sm font-semibold text-rose-100 transition hover:bg-rose-300/10 disabled:opacity-60"
+      >
+        <Trash2 size={16} />
+        {loading ? "Удаление..." : "Удалить"}
+      </button>
+      {error && <div className="text-sm text-danger">{error}</div>}
+    </div>
+  );
+}
+
+export function QrDeleteRequestButton({ codeId }: { codeId: string }) {
+  const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
+
+  async function requestDelete() {
+    if (loading || sent) return;
+    setLoading(true);
+    setError("");
+
+    const response = await fetch(`/api/qr/codes/${codeId}/delete-request`, {
+      method: "POST"
+    });
+
+    setLoading(false);
+
+    if (!response.ok) {
+      setError("Не удалось отправить запрос.");
+      return;
+    }
+
+    window.alert("Запрос отправлен. Ожидайте разрешения разработчика или руководителя.");
+    setSent(true);
+  }
+
+  return (
+    <div className="space-y-2">
+      <button
+        type="button"
+        onClick={requestDelete}
+        disabled={loading || sent}
+        className="inline-flex h-10 items-center gap-2 rounded-md border border-stroke px-4 text-sm font-semibold text-muted transition hover:text-text disabled:opacity-60"
+      >
+        <Trash2 size={16} />
+        {sent ? "Запрос отправлен" : loading ? "Отправка..." : "Запросить удаление"}
+      </button>
+      {error && <div className="text-sm text-danger">{error}</div>}
+    </div>
   );
 }
 

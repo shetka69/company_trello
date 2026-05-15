@@ -371,6 +371,7 @@ model ProductQrCode {
   company        Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
   createdBy      User             @relation(fields: [createdById], references: [id])
 
+  @@unique([companyId, productNumber])
   @@index([companyId, status])
   @@index([companyId, createdAt])
 }

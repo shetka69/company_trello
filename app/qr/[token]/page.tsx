@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { QrShipButton, QrWarehouseButton, qrStatusLabels } from "@/components/qr/qr-forms";
+import { QrDeleteButton, QrDeleteRequestButton, QrShipButton, QrWarehouseButton, qrStatusLabels } from "@/components/qr/qr-forms";
 import { getCurrentUser } from "@/lib/auth";
 import { hasUserPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -24,6 +24,7 @@ export default async function PublicQrPassportPage({ params }: { params: Promise
 
   const canSeeInternal = Boolean(user && user.companyId === code.companyId && hasUserPermission(user, "qr:read"));
   const canShip = Boolean(user && user.companyId === code.companyId && hasUserPermission(user, "qr:manage") && code.status !== "SHIPPED");
+  const canDeleteQr = Boolean(user && user.companyId === code.companyId && (user.role.code === "DEVELOPER" || user.role.code === "MANAGER"));
 
   return (
     <main className="min-h-screen bg-surface px-4 py-8 text-text sm:px-6 lg:px-8">
@@ -49,7 +50,7 @@ export default async function PublicQrPassportPage({ params }: { params: Promise
 
           <div className="grid gap-5 p-5 lg:grid-cols-[280px_1fr]">
             <div
-              className="mx-auto aspect-square w-full max-w-[280px] rounded-lg bg-white p-4 [&_svg]:h-full [&_svg]:w-full"
+              className="mx-auto aspect-[360/392] w-full max-w-[280px] rounded-lg bg-white p-3 [&_svg]:h-full [&_svg]:w-full"
               dangerouslySetInnerHTML={{ __html: code.qrSvg }}
             />
 
@@ -101,6 +102,11 @@ export default async function PublicQrPassportPage({ params }: { params: Promise
                     <div className="mt-4 flex flex-wrap gap-2">
                       {code.status === "WAITING" && <QrWarehouseButton codeId={code.id} />}
                       <QrShipButton codeId={code.id} />
+                    </div>
+                  )}
+                  {canSeeInternal && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {canDeleteQr ? <QrDeleteButton codeId={code.id} /> : <QrDeleteRequestButton codeId={code.id} />}
                     </div>
                   )}
                 </div>

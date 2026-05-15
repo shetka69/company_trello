@@ -36,6 +36,10 @@ function notificationHref(meta: unknown) {
     return `/app/tasks/${record.taskId}`;
   }
 
+  if (typeof record.token === "string") {
+    return `/qr/${record.token}`;
+  }
+
   return null;
 }
 
