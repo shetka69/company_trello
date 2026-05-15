@@ -1,5 +1,6 @@
 import { SidebarNavItem, type NavIconName } from "@/components/layout/nav-item-link";
 import type { CurrentUser } from "@/lib/auth";
+import { companyDisplayName } from "@/lib/company-display";
 import { hasUserPermission, type Permission } from "@/lib/permissions";
 
 const nav: { href: string; label: string; icon: NavIconName; permission: Permission }[] = [
@@ -20,7 +21,7 @@ export function Sidebar({ user }: { user: CurrentUser }) {
     <aside className="hidden w-64 shrink-0 border-r border-stroke bg-surface px-4 py-5 lg:block">
       <div className="mb-8">
         <div className="text-lg font-semibold tracking-tight">Акустический отдел</div>
-        <div className="mt-1 text-sm text-muted">{user.company.name}</div>
+        <div className="mt-1 text-sm text-muted">{companyDisplayName(user.company.name)}</div>
       </div>
       <nav className="space-y-1">
         {visible.map((item) => (

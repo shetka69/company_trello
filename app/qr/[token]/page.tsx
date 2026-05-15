@@ -4,6 +4,7 @@ import { ArrowLeft, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { QrDeleteButton, QrDeleteRequestButton, QrShipButton, QrWarehouseButton, qrStatusLabels } from "@/components/qr/qr-forms";
 import { getCurrentUser } from "@/lib/auth";
+import { companyDisplayName } from "@/lib/company-display";
 import { hasUserPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/utils";
@@ -26,6 +27,7 @@ export default async function PublicQrPassportPage({ params }: { params: Promise
   const canShip = Boolean(user && user.companyId === code.companyId && hasUserPermission(user, "qr:manage") && code.status !== "SHIPPED");
   const canDeleteQr = Boolean(user && user.companyId === code.companyId && (user.role.code === "DEVELOPER" || user.role.code === "MANAGER"));
   const canSeePublicQrLink = Boolean(user && user.companyId === code.companyId && user.role.code === "DEVELOPER");
+  const companyName = companyDisplayName(code.company.name);
 
   return (
     <main className="min-h-screen bg-surface px-4 py-8 text-text sm:px-6 lg:px-8">
@@ -60,7 +62,7 @@ export default async function PublicQrPassportPage({ params }: { params: Promise
                 <Info label="Название изделия" value={code.productName} />
                 <Info label="Номер изделия" value={code.productNumber} />
                 <Info label="Дата изготовления" value={formatDate(code.manufacturedAt)} />
-                <Info label="Производитель" value={code.company.name} />
+                <Info label="Производитель" value={companyName} />
               </div>
 
               <div className="rounded-lg border border-emerald-300/20 bg-emerald-300/10 p-4">
@@ -69,7 +71,7 @@ export default async function PublicQrPassportPage({ params }: { params: Promise
                   <div>
                     <h2 className="font-semibold text-emerald-100">Проверка подлинности</h2>
                     <p className="mt-2 text-sm leading-6 text-emerald-50/80">
-                      QR-код найден в базе {code.company.name}. Это официальный цифровой паспорт изделия.
+                      QR-код найден в базе {companyName}. Это официальный цифровой паспорт изделия.
                     </p>
                   </div>
                 </div>
