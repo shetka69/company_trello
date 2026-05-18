@@ -150,6 +150,8 @@ model User {
 
   @@index([companyId])
   @@index([roleId])
+  @@index([companyId, isActive])
+  @@index([companyId, name])
 }
 
 model UserPermission {
@@ -222,6 +224,10 @@ model Task {
   history        TaskHistory[]
 
   @@index([companyId, status])
+  @@index([companyId, dueAt])
+  @@index([companyId, updatedAt])
+  @@index([companyId, createdAt])
+  @@index([companyId, assigneeId, status])
   @@index([assigneeId])
   @@index([departmentId])
   @@index([projectId])
@@ -235,6 +241,8 @@ model TaskComment {
   createdAt DateTime @default(now())
   task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
   author    User     @relation(fields: [authorId], references: [id])
+
+  @@index([taskId, createdAt])
 }
 
 model TaskChecklistItem {
@@ -246,6 +254,8 @@ model TaskChecklistItem {
   createdAt DateTime @default(now())
   task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
   owner     User?    @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+
+  @@index([taskId, createdAt])
 }
 
 model TaskAttachment {
@@ -257,6 +267,8 @@ model TaskAttachment {
   size      Int?
   createdAt DateTime @default(now())
   task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, createdAt])
 }
 
 model TaskHistory {
@@ -269,6 +281,8 @@ model TaskHistory {
   createdAt DateTime @default(now())
   task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([taskId, createdAt])
 }
 
 model CalendarEvent {
@@ -307,6 +321,9 @@ model InventoryItem {
   tasks         Task[]
 
   @@index([companyId])
+  @@index([companyId, updatedAt])
+  @@index([companyId, category])
+  @@index([companyId, quantity])
 }
 
 model InventoryTransaction {
@@ -373,6 +390,8 @@ model ProductQrCode {
 
   @@index([companyId, status])
   @@index([companyId, createdAt])
+  @@index([companyId, updatedAt])
+  @@index([companyId, productNumber])
 }
 
 model Notification {
@@ -390,6 +409,8 @@ model Notification {
   user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([companyId, userId, readAt])
+  @@index([companyId, createdAt])
+  @@index([companyId, userId, createdAt])
 }
 
 model ActivityLog {
