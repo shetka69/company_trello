@@ -92,6 +92,7 @@ model Company {
   userPermissions UserPermission[]
   qrProductPresets QrProductPreset[]
   productQrCodes ProductQrCode[]
+  realtimeState RealtimeState?
 }
 
 model Department {
@@ -426,4 +427,14 @@ model ActivityLog {
   actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
 
   @@index([companyId, createdAt])
+}
+
+model RealtimeState {
+  id        String   @id @default(cuid())
+  companyId String   @unique
+  version   BigInt   @default(1)
+  updatedAt DateTime @updatedAt
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([updatedAt])
 }

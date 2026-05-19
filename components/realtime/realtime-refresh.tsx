@@ -3,8 +3,6 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
-const POLL_INTERVAL_MS = 3000;
-
 type VersionPayload = {
   version: string;
 };
@@ -15,6 +13,7 @@ export function RealtimeRefresh({ initialVersion }: { initialVersion: string }) 
   const versionRef = useRef(initialVersion);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [online, setOnline] = useState(true);
+  const [visible, setVisible] = useState(true);
 
   useEffect(() => {
     versionRef.current = initialVersion;
@@ -29,43 +28,28 @@ export function RealtimeRefresh({ initialVersion }: { initialVersion: string }) 
       setOnline(false);
     }
 
+    function handleVisibilityChange() {
+      setVisible(document.visibilityState === "visible");
+    }
+
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     setOnline(navigator.onLine);
+    handleVisibilityChange();
 
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 
   useEffect(() => {
-    let disposed = false;
-    let requestInFlight = false;
+    if (!online || !visible) return;
 
-    async function checkVersion() {
-      if (disposed || requestInFlight || !online || document.visibilityState !== "visible") return;
-      requestInFlight = true;
-
-      try {
-        const response = await fetch("/api/realtime/version", {
-          cache: "no-store",
-          headers: { Accept: "application/json" }
-        });
-
-        if (!response.ok) return;
-
-        const payload = (await response.json()) as VersionPayload;
-        if (!payload.version || payload.version === versionRef.current) return;
-
-        versionRef.current = payload.version;
-        scheduleRefresh();
-      } catch {
-        // Next poll will retry. The UI should stay quiet if the network blips.
-      } finally {
-        requestInFlight = false;
-      }
-    }
+    const events = new EventSource("/api/realtime/stream");
 
     function scheduleRefresh() {
       if (refreshTimerRef.current) return;
@@ -76,18 +60,30 @@ export function RealtimeRefresh({ initialVersion }: { initialVersion: string }) 
       }, 250);
     }
 
-    const interval = window.setInterval(checkVersion, POLL_INTERVAL_MS);
-    void checkVersion();
+    function handleVersion(event: MessageEvent<string>) {
+      try {
+        const payload = JSON.parse(event.data) as VersionPayload;
+        if (!payload.version || payload.version === versionRef.current) return;
+
+        versionRef.current = payload.version;
+        scheduleRefresh();
+      } catch {
+        // Ignore malformed realtime messages. EventSource will stay connected.
+      }
+    }
+
+    events.addEventListener("version", handleVersion);
 
     return () => {
-      disposed = true;
-      window.clearInterval(interval);
+      events.removeEventListener("version", handleVersion);
+      events.close();
+
       if (refreshTimerRef.current) {
         window.clearTimeout(refreshTimerRef.current);
         refreshTimerRef.current = null;
       }
     };
-  }, [online, pathname, router]);
+  }, [online, pathname, router, visible]);
 
   return null;
 }
