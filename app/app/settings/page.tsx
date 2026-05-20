@@ -69,7 +69,7 @@ export default async function SettingsPage() {
                 roles={roles}
                 departments={departments}
               />
-              {employee.id !== user.id && <UserDeleteButton employee={{ id: employee.id, name: employee.name, isActive: employee.isActive }} />}
+              {employee.id !== user.id && <UserDeleteButton employee={{ id: employee.id, name: employee.name }} />}
               {canDevelopSystem && (
                 <PermissionToggleGrid
                   employee={{

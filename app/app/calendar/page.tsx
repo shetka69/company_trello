@@ -9,6 +9,7 @@ import { canSeeAllCompanyData, hasUserPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { markOverdueTasks } from "@/lib/tasks-maintenance";
 import { formatDate } from "@/lib/utils";
+import { deletedUserLabel } from "@/lib/deleted-user";
 
 type ViewMode = "day" | "week" | "month";
 type CalendarFilterType = "EVENT" | "REMINDER" | "TASK_DEADLINE" | "DELIVERY";
@@ -81,7 +82,7 @@ export default async function CalendarPage({
             ...taskScopeFor(user),
             dueAt: { gte: range.start, lt: range.end }
           },
-          select: { id: true, title: true, dueAt: true, status: true, assignee: { select: { name: true } } },
+          select: { id: true, title: true, dueAt: true, status: true, assigneeNameSnapshot: true, assignee: { select: { name: true } } },
           orderBy: { dueAt: "asc" }
         })
       : [],
@@ -176,7 +177,7 @@ export default async function CalendarPage({
                       <div className="min-w-0 break-words text-xs text-muted">{formatDate(task.dueAt)}</div>
                     </div>
                     <div className="mt-2 min-w-0 text-sm font-medium [overflow-wrap:anywhere]">{task.title}</div>
-                    <div className="mt-1 text-xs text-muted">{task.assignee?.name ?? "Без исполнителя"}</div>
+                    <div className="mt-1 text-xs text-muted">{task.assignee?.name ?? deletedUserLabel(task.assigneeNameSnapshot)}</div>
                   </Link>
                 ))}
                 {dayDeliveries.map((delivery) => (

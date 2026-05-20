@@ -7,6 +7,7 @@ import { hasUserPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { markOverdueTasks } from "@/lib/tasks-maintenance";
 import { formatDate } from "@/lib/utils";
+import { deletedUserLabel } from "@/lib/deleted-user";
 
 export default async function DashboardPage() {
   const user = await requireUser();
@@ -101,7 +102,7 @@ export default async function DashboardPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <SectionTitle title="Задачи на сегодня" />
-          <List items={todayTasks.map((task) => ({ title: task.title, meta: `${formatDate(task.dueAt)} · ${task.assignee?.name ?? "Без исполнителя"}`, href: `/app/tasks/${task.id}` }))} />
+          <List items={todayTasks.map((task) => ({ title: task.title, meta: `${formatDate(task.dueAt)} · ${task.assignee?.name ?? deletedUserLabel(task.assigneeNameSnapshot)}`, href: `/app/tasks/${task.id}` }))} />
         </Card>
         <Card>
           <SectionTitle title="Критические события" />

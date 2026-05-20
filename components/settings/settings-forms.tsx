@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Pencil, Plus, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -217,14 +217,14 @@ export function UserEditForm({ employee, roles, departments }: { employee: Emplo
   );
 }
 
-export function UserDeleteButton({ employee }: { employee: Pick<Employee, "id" | "name" | "isActive"> }) {
+export function UserDeleteButton({ employee }: { employee: Pick<Employee, "id" | "name"> }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   async function remove() {
     if (loading) return;
-    const confirmed = window.confirm(`Удалить сотрудника "${employee.name}"? Аккаунт будет отключен, а история задач сохранится.`);
+    const confirmed = window.confirm(`Полностью удалить аккаунт сотрудника "${employee.name}"? Вход будет невозможен, а в задачах, комментариях и QR-кодах автор будет отображаться как удаленный сотрудник.`);
     if (!confirmed) return;
 
     setLoading(true);
@@ -249,11 +249,11 @@ export function UserDeleteButton({ employee }: { employee: Pick<Employee, "id" |
       <button
         type="button"
         onClick={remove}
-        disabled={loading || !employee.isActive}
+        disabled={loading}
         className="inline-flex h-9 items-center gap-2 rounded-md border border-rose-300/25 px-3 text-sm font-medium text-rose-100 transition hover:bg-rose-300/10 disabled:cursor-not-allowed disabled:opacity-50"
       >
         <Trash2 size={16} />
-        {loading ? "Удаление..." : employee.isActive ? "Удалить сотрудника" : "Сотрудник отключен"}
+        {loading ? "Удаление..." : "Удалить аккаунт"}
       </button>
       {error && <div className="mt-2 text-sm text-danger">{error}</div>}
     </div>
@@ -537,3 +537,4 @@ function SecondaryButton({ children, onClick }: { children: React.ReactNode; onC
     </button>
   );
 }
+

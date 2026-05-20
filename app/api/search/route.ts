@@ -18,7 +18,7 @@ export async function GET(request: Request) {
   const includeTasks = !scope || scope === "tasks";
   const includeAll = !scope;
 
-  const [tasks, items, users, projects] = await Promise.all([
+  const [tasks, items, users, projects, qrCodes] = await Promise.all([
     includeTasks && hasUserPermission(user, "tasks:read")
       ? prisma.task.findMany({
           where: {
@@ -61,6 +61,17 @@ export async function GET(request: Request) {
           take: 5,
           orderBy: { updatedAt: "desc" }
         })
+      : [],
+    includeAll && hasUserPermission(user, "qr:read")
+      ? prisma.productQrCode.findMany({
+          where: {
+            companyId: user.companyId,
+            OR: [{ productNumber: contains }, { productName: contains }]
+          },
+          select: { id: true, productNumber: true, productName: true, status: true },
+          take: 6,
+          orderBy: { updatedAt: "desc" }
+        })
       : []
   ]);
 
@@ -96,6 +107,14 @@ export async function GET(request: Request) {
       title: project.name,
       subtitle: project.description ?? "Проект",
       href: "/app/tasks"
+    })),
+    ...qrCodes.map((code) => ({
+      id: `qr-${code.id}`,
+      kind: "qr",
+      type: "QR-код",
+      title: code.productName,
+      subtitle: `Номер: ${code.productNumber} · ${code.status}`,
+      href: "/app/qr"
     }))
   ];
 

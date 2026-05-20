@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,7 @@ import { companyDisplayName } from "@/lib/company-display";
 import { hasUserPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/utils";
+import { deletedUserLabel } from "@/lib/deleted-user";
 
 export default async function PublicQrPassportPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -97,7 +98,7 @@ export default async function PublicQrPassportPage({ params }: { params: Promise
                     <Info label="Кому едет" value={code.recipient} />
                     <Info label="Куда едет" value={code.destination} />
                     <Info label="Срок отправки" value={formatDate(code.shippingDueAt)} />
-                    <Info label="Создал" value={code.createdBy.name} />
+                    <Info label="Создал" value={code.createdBy?.name ?? deletedUserLabel(code.createdByNameSnapshot)} />
                     <Info label="Отправлено" value={code.shippedAt ? formatDate(code.shippedAt) : "Еще не отправлено"} />
                     {canSeePublicQrLink && <Info label="Публичная ссылка" value={code.qrPayload} />}
                   </div>
@@ -144,3 +145,4 @@ function Info({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+

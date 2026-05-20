@@ -169,7 +169,7 @@ export function TaskFilters({ assignees, projects }: { assignees: Option[]; proj
                 placeholder="Поиск по задачам"
               />
             </div>
-            <Button className="shrink-0">Найти</Button>
+            <Button className="shrink-0 bg-emerald-400 text-black shadow-none hover:bg-emerald-300 active:bg-emerald-500">Найти</Button>
           </div>
 
           {resultsOpen && query.trim().length >= 2 && (

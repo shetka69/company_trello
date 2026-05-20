@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,7 @@ import { canSeeAllCompanyData, hasUserPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { markOverdueTasks } from "@/lib/tasks-maintenance";
 import { formatDate } from "@/lib/utils";
+import { deletedUserLabel } from "@/lib/deleted-user";
 
 const statusLabels = {
   NEW: "Новая",
@@ -176,7 +177,7 @@ export default async function TaskDetailsPage({ params }: { params: Promise<{ ta
               {task.comments.map((comment) => (
                 <div key={comment.id} className="rounded-md bg-surface p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="text-sm font-medium">{comment.author.name}</div>
+                    <div className="text-sm font-medium">{comment.author?.name ?? deletedUserLabel(comment.authorNameSnapshot)}</div>
                     <div className="text-xs text-muted">{formatDate(comment.createdAt)}</div>
                   </div>
                   <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-muted">{comment.body}</p>
@@ -212,8 +213,8 @@ export default async function TaskDetailsPage({ params }: { params: Promise<{ ta
               </div>
             )}
             <dl className="space-y-3 text-sm">
-              <Info label="Исполнитель" value={task.assignee?.name ?? "Не назначен"} />
-              <Info label="Постановщик" value={task.creator.name} />
+              <Info label="Исполнитель" value={task.assignee?.name ?? deletedUserLabel(task.assigneeNameSnapshot)} />
+              <Info label="Постановщик" value={task.creator?.name ?? deletedUserLabel(task.creatorNameSnapshot)} />
               <Info label="Отдел" value={task.department?.name ?? "Без отдела"} />
               <Info label="Проект" value={task.project?.name ?? "Без проекта"} />
               <Info label="Срок" value={formatDate(task.dueAt)} />
@@ -252,3 +253,4 @@ function Info({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+

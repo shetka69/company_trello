@@ -69,7 +69,7 @@ export function InventoryFilters({
               className="h-10 min-w-0 flex-1 rounded-md border border-stroke bg-surface px-3 text-sm outline-none transition focus:border-brand"
               placeholder="Название или категория"
             />
-            <Button className="shrink-0">Найти</Button>
+            <Button className="shrink-0 bg-emerald-400 text-black shadow-none hover:bg-emerald-300 active:bg-emerald-500">Найти</Button>
           </div>
         </form>
         <Select

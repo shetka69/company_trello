@@ -109,7 +109,7 @@ export async function DELETE(_request: Request, context: { params: Promise<{ use
   const { userId } = await context.params;
   const employee = await prisma.user.findFirst({
     where: { id: userId, companyId: user.companyId },
-    select: { id: true, email: true, isActive: true }
+    select: { id: true, email: true, name: true, isActive: true }
   });
 
   if (!employee) {
@@ -120,22 +120,37 @@ export async function DELETE(_request: Request, context: { params: Promise<{ use
     return NextResponse.json({ error: "Cannot delete yourself" }, { status: 400 });
   }
 
-  const updated = await prisma.user.update({
-    where: { id: employee.id },
-    data: { isActive: false },
-    select: { id: true, email: true, isActive: true }
-  });
+  await prisma.$transaction([
+    prisma.task.updateMany({
+      where: { companyId: user.companyId, creatorId: employee.id },
+      data: { creatorNameSnapshot: employee.name }
+    }),
+    prisma.task.updateMany({
+      where: { companyId: user.companyId, assigneeId: employee.id },
+      data: { assigneeNameSnapshot: employee.name }
+    }),
+    prisma.taskComment.updateMany({
+      where: { authorId: employee.id, task: { companyId: user.companyId } },
+      data: { authorNameSnapshot: employee.name }
+    }),
+    prisma.productQrCode.updateMany({
+      where: { companyId: user.companyId, createdById: employee.id },
+      data: { createdByNameSnapshot: employee.name }
+    }),
+    prisma.activityLog.create({
+      data: {
+        companyId: user.companyId,
+        actorId: user.id,
+        action: "user_deleted",
+        entity: "user",
+        entityId: employee.id,
+        meta: { email: employee.email, mode: "hard_delete" }
+      }
+    }),
+    prisma.user.delete({
+      where: { id: employee.id }
+    })
+  ]);
 
-  await prisma.activityLog.create({
-    data: {
-      companyId: user.companyId,
-      actorId: user.id,
-      action: "user_deleted",
-      entity: "user",
-      entityId: employee.id,
-      meta: { email: employee.email, mode: "soft_delete" }
-    }
-  });
-
-  return NextResponse.json({ user: updated });
+  return NextResponse.json({ ok: true });
 }

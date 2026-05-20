@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Send, Trash2 } from "lucide-react";
+import { Download, Printer, Send, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -220,6 +220,102 @@ export function PublicQrLink({ token }: { token: string }) {
   );
 }
 
+export function QrPrintDownloadActions({
+  productNumber,
+  qrSvg
+}: {
+  productNumber: string;
+  qrSvg: string;
+}) {
+  const fileName = `${safeFileName(productNumber)}.svg`;
+  const exportSvg = normalizeQrSvg(qrSvg);
+
+  function downloadSvg() {
+    const blob = new Blob([exportSvg], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function printQr() {
+    const html = `
+      <!doctype html>
+      <html lang="ru">
+        <head>
+          <meta charset="utf-8" />
+          <title></title>
+          <style>
+            @page { size: auto; margin: 0; }
+            * { box-sizing: border-box; }
+            html, body { margin: 0; min-height: 100%; background: #ffffff; }
+            body {
+              display: grid;
+              place-items: center;
+              font-family: Arial, sans-serif;
+              color: #111827;
+            }
+            .sheet {
+              width: 100%;
+              max-width: 360px;
+              padding: 14mm;
+              text-align: center;
+              break-inside: avoid;
+            }
+            .qr { width: 100%; }
+            .qr svg {
+              display: block;
+              width: 100%;
+              height: auto;
+            }
+          </style>
+        </head>
+        <body>
+          <main class="sheet">
+            <div class="qr">${exportSvg}</div>
+          </main>
+          <script>
+            setTimeout(() => {
+              window.focus();
+              window.print();
+            }, 250);
+          </script>
+        </body>
+      </html>
+    `;
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const printWindow = window.open(url, "_blank", "width=720,height=840");
+    if (!printWindow) return;
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={printQr}
+        className="inline-flex h-10 items-center gap-2 rounded-md border border-stroke px-4 text-sm font-semibold text-muted transition hover:text-text"
+      >
+        <Printer size={16} />
+        Печать
+      </button>
+      <button
+        type="button"
+        onClick={downloadSvg}
+        className="inline-flex h-10 items-center gap-2 rounded-md border border-stroke px-4 text-sm font-semibold text-muted transition hover:text-text"
+      >
+        <Download size={16} />
+        Скачать SVG
+      </button>
+    </>
+  );
+}
+
 export function QrDeleteButton({ codeId }: { codeId: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -365,4 +461,21 @@ function ComboboxField({
       </datalist>
     </label>
   );
+}
+
+function safeFileName(value: string) {
+  return value.trim().replace(/[<>:"/\\|?*\x00-\x1F]/g, "_") || "qr-code";
+}
+
+function normalizeQrSvg(value: string) {
+  return value.replace(/<svg\b([^>]*)>/g, (match, attributes: string) => {
+    const seen = new Set<string>();
+    const normalizedAttributes = attributes.replace(/\s([:\w-]+)="[^"]*"/g, (attribute: string, name: string) => {
+      if (seen.has(name)) return "";
+      seen.add(name);
+      return attribute;
+    });
+
+    return `<svg${normalizedAttributes}>`;
+  });
 }

@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { Suspense } from "react";
 import { Priority, TaskStatus, type Prisma } from "@prisma/client";
 import { TaskBoard } from "@/components/tasks/task-board";
@@ -12,6 +12,7 @@ import { canSeeAllCompanyData, hasUserPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { markOverdueTasks } from "@/lib/tasks-maintenance";
 import { formatDate } from "@/lib/utils";
+import { deletedUserLabel } from "@/lib/deleted-user";
 
 const statusLabels: Record<TaskStatus, string> = {
   NEW: "Новая",
@@ -104,7 +105,7 @@ export default async function TasksPage({ searchParams }: { searchParams?: Promi
           priority: task.priority,
           type: task.type,
           dueAt: task.dueAt?.toISOString() ?? null,
-          assignee: task.assignee,
+          assignee: task.assignee ?? (task.assigneeNameSnapshot ? { name: deletedUserLabel(task.assigneeNameSnapshot) } : null),
           project: task.project
         }))}
       />
@@ -130,7 +131,7 @@ export default async function TasksPage({ searchParams }: { searchParams?: Promi
                       {task.title}
                     </Link>
                   </td>
-                  <td className="py-3 pr-4 text-muted">{task.assignee?.name ?? "Не назначен"}</td>
+                  <td className="py-3 pr-4 text-muted">{task.assignee?.name ?? deletedUserLabel(task.assigneeNameSnapshot)}</td>
                   <td className="py-3 pr-4 text-muted">{task.project?.name ?? "Без проекта"}</td>
                   <td className="py-3 pr-4">
                     <Badge>{statusLabels[task.status]}</Badge>
@@ -176,3 +177,4 @@ function isTaskStatus(value?: string): value is TaskStatus {
 function isPriority(value?: string): value is Priority {
   return Object.values(Priority).includes(value as Priority);
 }
+

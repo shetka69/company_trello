@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { Search } from "lucide-react";
@@ -78,7 +78,7 @@ export function GlobalSearch() {
           }}
           onFocus={() => setOpen(true)}
           className="w-full bg-transparent text-sm outline-none placeholder:text-muted"
-          placeholder="Поиск по задачам, складу, сотрудникам"
+          placeholder="Поиск по задачам, складу, сотрудникам и QR-кодам"
         />
       </div>
 
@@ -113,3 +113,4 @@ export function GlobalSearch() {
     </div>
   );
 }
+

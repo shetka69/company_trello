@@ -56,6 +56,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ taskI
     }
   }
 
+  let assigneeNameSnapshot: string | null | undefined;
   if (parsed.data.assigneeId) {
     const assignee = await prisma.user.findFirst({
       where: {
@@ -68,12 +69,16 @@ export async function PATCH(request: Request, context: { params: Promise<{ taskI
             ? {}
             : { departmentId: user.departmentId })
       },
-      select: { id: true }
+      select: { id: true, name: true }
     });
 
     if (!assignee) {
       return NextResponse.json({ error: "Invalid assignee" }, { status: 400 });
     }
+
+    assigneeNameSnapshot = assignee.name;
+  } else if (parsed.data.assigneeId === null) {
+    assigneeNameSnapshot = null;
   }
 
   if (parsed.data.projectId) {
@@ -102,6 +107,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ taskI
     title: parsed.data.title,
     description: parsed.data.description,
     assigneeId: parsed.data.assigneeId,
+    assigneeNameSnapshot,
     projectId: parsed.data.projectId,
     departmentId,
     dueAt: parsed.data.dueAt === undefined ? undefined : parsed.data.dueAt ? new Date(parsed.data.dueAt) : null,

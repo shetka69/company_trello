@@ -30,6 +30,7 @@ export async function POST(request: Request, context: { params: Promise<{ taskId
     data: {
       taskId: task.id,
       authorId: user.id,
+      authorNameSnapshot: user.name,
       body: parsed.data.body.trim()
     },
     include: { author: { select: { name: true } } }

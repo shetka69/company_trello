@@ -48,6 +48,7 @@ export async function POST(request: Request) {
     data: {
       companyId: user.companyId,
       createdById: user.id,
+      createdByNameSnapshot: user.name,
       token,
       productNumber,
       productName: parsed.data.productName.trim(),

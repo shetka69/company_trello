@@ -383,7 +383,7 @@ export function InventoryTransactionForm({ item }: { item: Pick<InventoryItem, "
       />
       {error && <div className="text-sm text-danger">{error}</div>}
       <div className="flex justify-end">
-        <Button disabled={loading || numberValue(quantity) <= 0}>{loading ? "Проведение..." : "Провести"}</Button>
+        <Button className="bg-emerald-400 text-black shadow-none hover:bg-emerald-300 active:bg-emerald-500" disabled={loading || numberValue(quantity) <= 0}>{loading ? "Сохранение..." : "Записать операцию"}</Button>
       </div>
     </form>
   );

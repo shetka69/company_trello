@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge";
+﻿import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import {
   ProductPresetForm,
@@ -6,6 +6,7 @@ import {
   QrCodeCreateForm,
   QrDeleteButton,
   QrDeleteRequestButton,
+  QrPrintDownloadActions,
   QrShipButton,
   QrWarehouseButton,
   qrStatusLabels
@@ -15,6 +16,7 @@ import { requirePermission, requireUser } from "@/lib/auth";
 import { hasUserPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/utils";
+import { deletedUserLabel } from "@/lib/deleted-user";
 
 export default async function QrCodesPage() {
   const user = await requireUser();
@@ -94,11 +96,12 @@ export default async function QrCodesPage() {
                   <Info label="Кому едет" value={code.recipient} />
                   <Info label="Куда едет" value={code.destination} />
                   <Info label="Срок отправки" value={formatDate(code.shippingDueAt)} />
-                  <Info label="Создал" value={code.createdBy.name} />
+                  <Info label="Создал" value={code.createdBy?.name ?? deletedUserLabel(code.createdByNameSnapshot)} />
                   {canSeePublicQrLink && <Info label="Ссылка" value={code.qrPayload} />}
                 </dl>
 
                 <div className="flex flex-wrap gap-2">
+                  <QrPrintDownloadActions productNumber={code.productNumber} qrSvg={code.qrSvg} />
                   {canSeePublicQrLink && <PublicQrLink token={code.token} />}
                   {canManageQr && code.status === "WAITING" && <QrWarehouseButton codeId={code.id} />}
                   {canManageQr && code.status !== "SHIPPED" && <QrShipButton codeId={code.id} />}
@@ -121,3 +124,4 @@ function Info({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+

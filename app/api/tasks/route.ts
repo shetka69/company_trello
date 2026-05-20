@@ -57,6 +57,7 @@ export async function POST(request: Request) {
     }
   }
 
+  let assigneeNameSnapshot: string | undefined;
   if (parsed.data.assigneeId) {
     const assignee = await prisma.user.findFirst({
       where: {
@@ -69,12 +70,14 @@ export async function POST(request: Request) {
             ? {}
             : { departmentId: user.departmentId })
       },
-      select: { id: true }
+      select: { id: true, name: true }
     });
 
     if (!assignee) {
       return NextResponse.json({ error: "Invalid assignee" }, { status: 400 });
     }
+
+    assigneeNameSnapshot = assignee.name;
   }
 
   if (parsed.data.projectId) {
@@ -103,9 +106,11 @@ export async function POST(request: Request) {
     data: {
       companyId: user.companyId,
       creatorId: user.id,
+      creatorNameSnapshot: user.name,
       title: parsed.data.title,
       description: parsed.data.description,
       assigneeId: parsed.data.assigneeId,
+      assigneeNameSnapshot,
       projectId: parsed.data.projectId,
       departmentId,
       dueAt: parsed.data.dueAt ? new Date(parsed.data.dueAt) : undefined,

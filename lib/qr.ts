@@ -13,7 +13,10 @@ export async function createQrSvg(payload: string, productNumber?: string) {
 
   if (!productNumber) return qrSvg;
 
-  const embeddedQr = qrSvg.replace("<svg ", '<svg x="20" y="16" width="320" height="320" ');
+  const embeddedQr = qrSvg
+    .replace(/\swidth="[^"]*"/, "")
+    .replace(/\sheight="[^"]*"/, "")
+    .replace("<svg ", '<svg x="20" y="16" width="320" height="320" ');
   const safeProductNumber = escapeSvgText(productNumber);
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="360" height="392" viewBox="0 0 360 392" role="img" aria-label="QR ${safeProductNumber}">

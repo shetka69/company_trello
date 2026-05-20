@@ -209,16 +209,18 @@ model Task {
   dueAt          DateTime?
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
-  creatorId      String
+  creatorId      String?
+  creatorNameSnapshot String?
   assigneeId     String?
+  assigneeNameSnapshot String?
   sortOrder      Int        @default(0)
 
   company        Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
   department     Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   project        Project?   @relation(fields: [projectId], references: [id], onDelete: SetNull)
   inventoryItem  InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
-  creator        User       @relation("CreatedTasks", fields: [creatorId], references: [id])
-  assignee       User?      @relation("AssignedTasks", fields: [assigneeId], references: [id])
+  creator        User?      @relation("CreatedTasks", fields: [creatorId], references: [id], onDelete: SetNull)
+  assignee       User?      @relation("AssignedTasks", fields: [assigneeId], references: [id], onDelete: SetNull)
   comments       TaskComment[]
   checklist      TaskChecklistItem[]
   attachments    TaskAttachment[]
@@ -237,11 +239,12 @@ model Task {
 model TaskComment {
   id        String   @id @default(cuid())
   taskId    String
-  authorId  String
+  authorId  String?
+  authorNameSnapshot String?
   body      String
   createdAt DateTime @default(now())
   task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  author    User     @relation(fields: [authorId], references: [id])
+  author    User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
 
   @@index([taskId, createdAt])
 }
@@ -371,7 +374,8 @@ model QrProductPreset {
 model ProductQrCode {
   id             String           @id @default(cuid())
   companyId      String
-  createdById    String
+  createdById    String?
+  createdByNameSnapshot String?
   token          String           @unique
   productNumber  String
   productName    String
@@ -387,7 +391,7 @@ model ProductQrCode {
   shippedAt      DateTime?
 
   company        Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  createdBy      User             @relation(fields: [createdById], references: [id])
+  createdBy      User?            @relation(fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([companyId, status])
   @@index([companyId, createdAt])
